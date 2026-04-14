@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_today"
+        android:icon="@android:drawable/ic_menu_today"
+        android:title="日程" />
+    <item
+        android:id="@+id/nav_timetable"
+        android:icon="@android:drawable/ic_menu_month"
+        android:title="课表" />
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@android:drawable/ic_menu_manage"
+        android:title="设置" />
+</menu>

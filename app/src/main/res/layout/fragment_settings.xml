@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#44FFF2DA">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="设置"
+            android:textColor="#5A3D1F"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="课表管理"
+            android:textColor="#7A5A37"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/manageTimetableButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="打开课表管理页"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="启动默认页面"
+            android:textColor="#7A5A37"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/defaultOpenGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/defaultOpenTimetable"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="课表"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/defaultOpenToday"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="日程"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="学期开始周（第一周起始日期）"
+            android:textColor="#7A5A37"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/semesterStartDateText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/changeSemesterStartButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="修改"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="主题色"
+            android:textColor="#7A5A37"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/themeGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/themeWarm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="暖色"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/themeOcean"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="海蓝"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/themeMint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="薄荷"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="课表字号"
+            android:textColor="#7A5A37"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/fontScaleGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/fontSmall"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="小号"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/fontNormal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="标准"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/fontLarge"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="大号"
+                android:textColor="#5A3D1F"
+                android:textSize="14sp" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="非本周课程"
+            android:textColor="#7A5A37"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/showNonCurrentSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="显示非本周课程"
+            android:textColor="#5A3D1F"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="自定义背景"
+            android:textColor="#7A5A37"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/chooseBackgroundButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="选择并裁剪"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/clearBackgroundButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:text="恢复默认"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="支持从相册选择后截取，保存为应用背景。"
+            android:textColor="#7A5A37"
+            android:textSize="13sp" />
+
+    </LinearLayout>
+
+</ScrollView>
