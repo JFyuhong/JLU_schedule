@@ -3,7 +3,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
-    android:background="#44FFFFFF"
     android:gravity="center_vertical"
     android:minHeight="68dp"
     android:orientation="horizontal"
@@ -41,7 +40,7 @@
                 android:paddingTop="2dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
-                android:text="当前"
+                android:text="@string/profile_current"
                 android:textSize="11sp"
                 android:visibility="gone" />
         </LinearLayout>
@@ -59,7 +58,7 @@
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:background="@android:color/transparent"
-        android:contentDescription="更多操作"
+        android:contentDescription="@string/profile_more_actions"
         android:src="@android:drawable/ic_menu_more" />
 
 </LinearLayout>

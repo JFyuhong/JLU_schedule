@@ -10,7 +10,7 @@
         android:id="@+id/manageTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="课表管理"
+        android:text="@string/manage_title"
         android:textSize="22sp"
         android:textStyle="bold" />
 
@@ -35,7 +35,7 @@
         android:layout_width="match_parent"
         android:layout_height="46dp"
         android:layout_marginTop="8dp"
-        android:text="新建空课表"
+        android:text="@string/manage_create_empty"
         android:textAllCaps="false" />
 
 </LinearLayout>

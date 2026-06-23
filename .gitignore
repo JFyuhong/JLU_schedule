@@ -15,6 +15,7 @@ local.properties
 
 # VS Code temp
 .vscode/.ropeproject/
+.debug/
 
 # OS and logs
 .DS_Store
@@ -29,4 +30,5 @@ replay_pid*
 # Test / coverage
 **/captures/
 **/outputs/
+app/release
 

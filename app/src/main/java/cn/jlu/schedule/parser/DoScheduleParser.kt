@@ -8,6 +8,10 @@ import cn.jlu.schedule.model.WeekParity
 import cn.jlu.schedule.model.WeekRule
 import cn.jlu.schedule.model.Weekday
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 
 object DoScheduleParser {
     private val json = Json {
@@ -28,9 +32,9 @@ object DoScheduleParser {
                     row.teacher.orEmpty(),
                     row.arrangedTimeText.orEmpty(),
                     row.weekText.orEmpty(),
-                    row.weekdayNumber?.toString().orEmpty(),
-                    row.startSection?.toString().orEmpty(),
-                    row.endSection?.toString().orEmpty(),
+                    row.weekdayNumber.asText(),
+                    row.startSection.asText(),
+                    row.endSection.asText(),
                     row.classroomName.orEmpty(),
                     row.buildingName.orEmpty()
                 ).joinToString("|")
@@ -40,7 +44,7 @@ object DoScheduleParser {
                 courseName = row.courseName.orEmpty(),
                 teacher = row.teacher.orEmpty(),
                 semester = row.semesterDisplay ?: row.semesterCode.orEmpty(),
-                credit = row.credit,
+                credit = row.credit.asDoubleOrNull(),
                 rawWeekText = row.weekText.orEmpty(),
                 meetings = parseMeetings(row)
             )
@@ -106,9 +110,9 @@ object DoScheduleParser {
     }
 
     private fun fallbackMeeting(row: RawCourseRow): MeetingTime? {
-        val weekday = parseWeekdayFromNumber(row.weekdayNumber ?: return null) ?: return null
-        val start = row.startSection ?: return null
-        val end = row.endSection ?: return null
+        val weekday = parseWeekdayFromNumber(row.weekdayNumber.asIntOrNull() ?: return null) ?: return null
+        val start = row.startSection.asIntOrNull() ?: return null
+        val end = row.endSection.asIntOrNull() ?: return null
         val location = (row.classroomName ?: row.buildingName).orEmpty()
 
         return MeetingTime(
@@ -159,5 +163,20 @@ object DoScheduleParser {
         6 -> Weekday.SATURDAY
         7 -> Weekday.SUNDAY
         else -> null
+    }
+
+    private fun JsonElement?.asIntOrNull(): Int? {
+        val primitive = this as? JsonPrimitive ?: return null
+        return primitive.intOrNull ?: primitive.content.trim().toIntOrNull()
+    }
+
+    private fun JsonElement?.asDoubleOrNull(): Double? {
+        val primitive = this as? JsonPrimitive ?: return null
+        return primitive.doubleOrNull ?: primitive.content.trim().toDoubleOrNull()
+    }
+
+    private fun JsonElement?.asText(): String {
+        val primitive = this as? JsonPrimitive ?: return ""
+        return primitive.content
     }
 }

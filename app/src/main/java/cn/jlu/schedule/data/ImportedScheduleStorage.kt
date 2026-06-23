@@ -1,6 +1,7 @@
 package cn.jlu.schedule.data
 
 import android.content.Context
+import android.util.Log
 import cn.jlu.schedule.model.CourseSchedule
 import cn.jlu.schedule.model.MeetingTime
 import cn.jlu.schedule.model.WeekParity
@@ -11,11 +12,18 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.IOException
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.UUID
 
 object ImportedScheduleStorage {
+    private const val TAG = "ImportedScheduleStorage"
     private const val LEGACY_FILE_NAME = "imported_schedule.do"
     private const val STORAGE_DIR = "timetables"
     private const val META_FILE_NAME = "meta.json"
@@ -30,7 +38,8 @@ object ImportedScheduleStorage {
         val id: String,
         val name: String,
         val isActive: Boolean,
-        val updatedAt: Long
+        val updatedAt: Long,
+        val semesterStartDate: LocalDate
     )
 
     enum class ImportMode {
@@ -42,7 +51,8 @@ object ImportedScheduleStorage {
         val profileId: String,
         val profileName: String,
         val courseCount: Int,
-        val isNewProfile: Boolean
+        val isNewProfile: Boolean,
+        val semesterStartDate: LocalDate?
     )
 
     data class ManualCourseInput(
@@ -65,7 +75,8 @@ object ImportedScheduleStorage {
                 id = it.id,
                 name = it.name,
                 isActive = it.id == meta.activeId,
-                updatedAt = it.updatedAt
+                updatedAt = it.updatedAt,
+                semesterStartDate = semesterStartDateForProfile(it)
             )
         }
     }
@@ -94,13 +105,15 @@ object ImportedScheduleStorage {
         val profileName = name.ifBlank { "课表${timestampLabel()}" }
         val fileName = "courses_${profileId}.json"
         writeCoursesFile(context, fileName, emptyList())
+        val semesterStartDate = SemesterStartDatePolicy.defaultForToday()
 
         val newProfile = StoredProfileMeta(
             id = profileId,
             name = profileName,
             coursesFile = fileName,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            semesterStartDate = semesterStartDate.toString()
         )
         val newMeta = meta.copy(
             activeId = profileId,
@@ -108,7 +121,7 @@ object ImportedScheduleStorage {
         )
         saveMeta(context, newMeta)
 
-        return TimetableProfile(profileId, profileName, true, now)
+        return TimetableProfile(profileId, profileName, true, now, semesterStartDate)
     }
 
     fun renameProfile(
@@ -160,21 +173,28 @@ object ImportedScheduleStorage {
         courses: List<CourseSchedule>,
         mode: ImportMode,
         newProfileName: String? = null,
+        semesterStartDate: LocalDate? = null,
         sampleAssetName: String = "sample_schedule.do"
     ): ImportResult {
         val merged = mergeDuplicateCourses(courses)
         val meta = ensureInitialized(context, sampleAssetName)
         val now = System.currentTimeMillis()
+        val profileSemesterStart = semesterStartDate
+            ?: SemesterStartDatePolicy.inferFromCourses(merged, AppPreferences.getSemesterStartDate(context))
 
         return when (mode) {
             ImportMode.OVERWRITE_ACTIVE -> {
                 val active = meta.profiles.firstOrNull { it.id == meta.activeId } ?: meta.profiles.first()
                 writeCoursesFile(context, active.coursesFile, merged)
                 val updatedProfiles = meta.profiles.map {
-                    if (it.id == active.id) it.copy(updatedAt = now) else it
+                    if (it.id == active.id) {
+                        it.copy(updatedAt = now, semesterStartDate = profileSemesterStart.toString())
+                    } else {
+                        it
+                    }
                 }
                 saveMeta(context, meta.copy(activeId = active.id, profiles = updatedProfiles))
-                ImportResult(active.id, active.name, merged.size, false)
+                ImportResult(active.id, active.name, merged.size, false, profileSemesterStart)
             }
 
             ImportMode.CREATE_NEW -> {
@@ -187,12 +207,40 @@ object ImportedScheduleStorage {
                     name = profileName,
                     coursesFile = coursesFile,
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    semesterStartDate = profileSemesterStart.toString()
                 )
                 saveMeta(context, meta.copy(activeId = profileId, profiles = meta.profiles + created))
-                ImportResult(profileId, profileName, merged.size, true)
+                ImportResult(profileId, profileName, merged.size, true, profileSemesterStart)
             }
         }
+    }
+
+    fun getActiveSemesterStartDate(
+        context: Context,
+        sampleAssetName: String = "sample_schedule.do"
+    ): LocalDate {
+        val meta = ensureInitialized(context, sampleAssetName)
+        val active = meta.profiles.firstOrNull { it.id == meta.activeId } ?: meta.profiles.first()
+        return semesterStartDateForProfile(active)
+    }
+
+    fun setActiveSemesterStartDate(
+        context: Context,
+        date: LocalDate,
+        sampleAssetName: String = "sample_schedule.do"
+    ) {
+        val meta = ensureInitialized(context, sampleAssetName)
+        val active = meta.profiles.firstOrNull { it.id == meta.activeId } ?: meta.profiles.first()
+        val normalized = SemesterStartDatePolicy.normalizeToWeekStart(date)
+        val updatedProfiles = meta.profiles.map {
+            if (it.id == active.id) {
+                it.copy(updatedAt = System.currentTimeMillis(), semesterStartDate = normalized.toString())
+            } else {
+                it
+            }
+        }
+        saveMeta(context, meta.copy(activeId = active.id, profiles = updatedProfiles))
     }
 
     fun addManualCourseToActive(
@@ -200,6 +248,13 @@ object ImportedScheduleStorage {
         input: ManualCourseInput,
         sampleAssetName: String = "sample_schedule.do"
     ) {
+        require(input.courseName.isNotBlank()) { "课程名不能为空" }
+        require(input.startSection in 1..12) { "开始节必须在 1-12 之间" }
+        require(input.endSection in 1..12) { "结束节必须在 1-12 之间" }
+        require(input.endSection >= input.startSection) { "结束节不能小于开始节" }
+        require(input.startWeek in 1..30) { "开始周必须在 1-30 之间" }
+        require(input.endWeek in 1..30) { "结束周必须在 1-30 之间" }
+        require(input.endWeek >= input.startWeek) { "结束周不能小于开始周" }
         val meta = ensureInitialized(context, sampleAssetName)
         val active = meta.profiles.firstOrNull { it.id == meta.activeId } ?: meta.profiles.first()
         val currentCourses = readCoursesFile(context, active.coursesFile)
@@ -278,9 +333,14 @@ object ImportedScheduleStorage {
         val metaFile = metaFile(context)
         if (metaFile.exists() && metaFile.length() > 0L) {
             val existing = runCatching { json.decodeFromString<StoredMeta>(metaFile.readText()) }
+                .onFailure { Log.w(TAG, "Failed to read timetable meta", it) }
                 .getOrElse { StoredMeta() }
             if (existing.profiles.isNotEmpty()) {
-                return existing
+                val migrated = fillMissingSemesterStartDates(context, existing)
+                if (migrated != existing) {
+                    saveMeta(context, migrated)
+                }
+                return migrated
             }
         }
 
@@ -289,6 +349,10 @@ object ImportedScheduleStorage {
         val defaultFile = "courses_${defaultId}.json"
         val initialCourses = loadInitialCourses(context, sampleAssetName)
         writeCoursesFile(context, defaultFile, initialCourses)
+        val semesterStartDate = SemesterStartDatePolicy.inferFromCourses(
+            initialCourses,
+            AppPreferences.getSemesterStartDate(context)
+        )
 
         val initialized = StoredMeta(
             activeId = defaultId,
@@ -298,7 +362,8 @@ object ImportedScheduleStorage {
                     name = DEFAULT_PROFILE_NAME,
                     coursesFile = defaultFile,
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    semesterStartDate = semesterStartDate.toString()
                 )
             )
         )
@@ -311,14 +376,21 @@ object ImportedScheduleStorage {
         if (legacy.exists() && legacy.length() > 0) {
             runCatching {
                 return DoScheduleParser.parse(legacy.readText())
+            }.onFailure {
+                Log.w(TAG, "Failed to parse legacy imported schedule", it)
             }
             legacy.delete()
         }
 
         val sample = runCatching {
             context.assets.open(sampleAssetName).bufferedReader().use { it.readText() }
-        }.getOrDefault(EMPTY_SCHEDULE_JSON)
-        return runCatching { DoScheduleParser.parse(sample) }.getOrDefault(emptyList())
+        }.getOrElse {
+            Log.w(TAG, "Failed to read sample schedule asset $sampleAssetName", it)
+            EMPTY_SCHEDULE_JSON
+        }
+        return runCatching { DoScheduleParser.parse(sample) }
+            .onFailure { Log.w(TAG, "Failed to parse initial schedule", it) }
+            .getOrDefault(emptyList())
     }
 
     private fun storageDir(context: Context): File = File(context.filesDir, STORAGE_DIR)
@@ -328,7 +400,7 @@ object ImportedScheduleStorage {
     private fun coursesFile(context: Context, fileName: String): File = File(storageDir(context), fileName)
 
     private fun saveMeta(context: Context, meta: StoredMeta) {
-        metaFile(context).writeText(json.encodeToString(meta))
+        writeTextAtomically(metaFile(context), json.encodeToString(meta))
     }
 
     private fun readCoursesFile(context: Context, fileName: String): List<CourseSchedule> {
@@ -338,13 +410,69 @@ object ImportedScheduleStorage {
         }
         val persisted = runCatching {
             json.decodeFromString<List<PersistedCourse>>(file.readText())
+        }.onFailure {
+            Log.w(TAG, "Failed to read courses file $fileName", it)
         }.getOrDefault(emptyList())
         return persisted.map { it.toCourseSchedule() }
     }
 
     private fun writeCoursesFile(context: Context, fileName: String, courses: List<CourseSchedule>) {
         val persisted = courses.map { PersistedCourse.fromCourseSchedule(it) }
-        coursesFile(context, fileName).writeText(json.encodeToString(persisted))
+        writeTextAtomically(coursesFile(context, fileName), json.encodeToString(persisted))
+    }
+
+    private fun writeTextAtomically(target: File, content: String) {
+        val parent = target.parentFile
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            throw IOException("Cannot create directory ${parent.absolutePath}")
+        }
+        val tempParent = parent ?: throw IOException("Cannot resolve parent for ${target.absolutePath}")
+        val temp = File(tempParent, "${target.name}.tmp")
+        temp.writeText(content, Charsets.UTF_8)
+        try {
+            Files.move(
+                temp.toPath(),
+                target.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING
+            )
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        } catch (error: Throwable) {
+            temp.delete()
+            throw error
+        }
+    }
+
+    private fun fillMissingSemesterStartDates(context: Context, meta: StoredMeta): StoredMeta {
+        var changed = false
+        val migratedProfiles = meta.profiles.map { profile ->
+            if (!profile.semesterStartDate.isNullOrBlank()) {
+                profile
+            } else {
+                changed = true
+                val courses = readCoursesFile(context, profile.coursesFile)
+                val inferred = SemesterStartDatePolicy.inferFromCourses(
+                    courses,
+                    AppPreferences.getSemesterStartDate(context)
+                )
+                profile.copy(semesterStartDate = inferred.toString())
+            }
+        }
+        return if (changed) meta.copy(profiles = migratedProfiles) else meta
+    }
+
+    private fun semesterStartDateForProfile(profile: StoredProfileMeta): LocalDate {
+        val raw = profile.semesterStartDate
+        if (raw.isNullOrBlank()) {
+            return SemesterStartDatePolicy.defaultForToday()
+        }
+        return try {
+            SemesterStartDatePolicy.normalizeToWeekStart(LocalDate.parse(raw))
+        } catch (error: DateTimeParseException) {
+            Log.w(TAG, "Invalid semester start date in profile ${profile.id}: $raw", error)
+            SemesterStartDatePolicy.defaultForToday()
+        }
     }
 
     private fun mergeDuplicateCourses(courses: List<CourseSchedule>): List<CourseSchedule> {
@@ -384,22 +512,18 @@ object ImportedScheduleStorage {
     }
 
     private fun ManualCourseInput.toCourseSchedule(): CourseSchedule {
-        val normalizedStart = startSection.coerceAtLeast(1)
-        val normalizedEnd = endSection.coerceAtLeast(normalizedStart)
-        val startWeekSafe = startWeek.coerceAtLeast(1)
-        val endWeekSafe = endWeek.coerceAtLeast(startWeekSafe)
         return CourseSchedule(
-            courseName = courseName,
+            courseName = courseName.trim(),
             teacher = teacher,
             semester = semester,
             credit = null,
-            rawWeekText = "${startWeekSafe}-${endWeekSafe}周",
+            rawWeekText = "${startWeek}-${endWeek}周",
             meetings = listOf(
                 MeetingTime(
                     weekday = weekday,
-                    startSection = normalizedStart,
-                    endSection = normalizedEnd,
-                    weekRules = listOf(WeekRule(startWeekSafe, endWeekSafe, parity)),
+                    startSection = startSection,
+                    endSection = endSection,
+                    weekRules = listOf(WeekRule(startWeek, endWeek, parity)),
                     location = location
                 )
             )
@@ -422,7 +546,8 @@ object ImportedScheduleStorage {
         val name: String,
         val coursesFile: String,
         val createdAt: Long,
-        val updatedAt: Long
+        val updatedAt: Long,
+        val semesterStartDate: String? = null
     )
 
     @Serializable

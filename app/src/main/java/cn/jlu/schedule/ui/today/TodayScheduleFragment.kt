@@ -1,5 +1,6 @@
 package cn.jlu.schedule.ui.today
 
+import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -10,13 +11,13 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import cn.jlu.schedule.R
-import cn.jlu.schedule.data.AppPreferences
 import cn.jlu.schedule.data.ImportedScheduleStorage
 import cn.jlu.schedule.domain.WeekScheduleCalculator
 import cn.jlu.schedule.model.Weekday
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class TodayScheduleFragment : Fragment() {
     private val periodTimeRanges = listOf(
@@ -42,6 +43,7 @@ class TodayScheduleFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_today_schedule, container, false)
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val title = view.findViewById<TextView>(R.id.todayTitle)
@@ -69,12 +71,17 @@ class TodayScheduleFragment : Fragment() {
         val today = LocalDate.now()
         val todayWeekday = weekdayFromJava(today.dayOfWeek.value)
         title.text = "今日日程"
-        subTitle.text = "${today.format(DateTimeFormatter.ofPattern("yyyy/M/d"))} 周${label(todayWeekday)}"
+        subTitle.text = String.format(
+            Locale.getDefault(),
+            "%s 周%s",
+            today.format(DateTimeFormatter.ofPattern("yyyy/M/d")),
+            label(todayWeekday)
+        )
 
         val ctx = requireContext()
         val courses = runCatching { ImportedScheduleStorage.loadCoursesOrSampleAsset(ctx, "sample_schedule.do") }
             .getOrElse { emptyList() }
-        val semesterStart = AppPreferences.getSemesterStartDate(ctx)
+        val semesterStart = ImportedScheduleStorage.getActiveSemesterStartDate(ctx)
         val totalWeeks = WeekScheduleCalculator.totalWeeks(courses)
         val week = guessCurrentWeek(totalWeeks, semesterStart)
         val todayMeetings = WeekScheduleCalculator.meetingsForWeek(courses, week)
@@ -106,11 +113,19 @@ class TodayScheduleFragment : Fragment() {
             return
         }
 
-        countChip.text = "${todayMeetings.size} 门课"
+        countChip.text = String.format(Locale.getDefault(), "%d 门课", todayMeetings.size)
         val firstStart = todayMeetings.minOf { it.meeting.startSection }.coerceIn(1, periodTimeRanges.size)
         val lastEnd = todayMeetings.maxOf { it.meeting.endSection }.coerceIn(1, periodTimeRanges.size)
-        firstClass.text = "最早：${periodTimeRanges[firstStart - 1].substringBefore('-')}"
-        lastClass.text = "最晚：${periodTimeRanges[lastEnd - 1].substringAfter('-')}"
+        firstClass.text = String.format(
+            Locale.getDefault(),
+            "最早：%s",
+            periodTimeRanges[firstStart - 1].substringBefore('-')
+        )
+        lastClass.text = String.format(
+            Locale.getDefault(),
+            "最晚：%s",
+            periodTimeRanges[lastEnd - 1].substringAfter('-')
+        )
 
         todayMeetings.forEachIndexed { index, item ->
             val start = item.meeting.startSection.coerceIn(1, periodTimeRanges.size)

@@ -1,7 +1,9 @@
 package cn.jlu.schedule.ui.timetable
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import cn.jlu.schedule.R
@@ -22,9 +24,11 @@ object CourseDetailBottomSheet {
         Weekday.SUNDAY to "周日"
     )
 
+    @SuppressLint("SetTextI18n")
     fun show(context: Context, item: CourseMeetingRef, periodRanges: List<String>) {
         val dialog = BottomSheetDialog(context)
-        val view = LayoutInflater.from(context).inflate(R.layout.bottom_sheet_course_detail, null)
+        val parent = FrameLayout(context)
+        val view = LayoutInflater.from(context).inflate(R.layout.bottom_sheet_course_detail, parent, false)
         val detailCard = view.findViewById<CardView>(R.id.detailCard)
 
         val colors = when (AppPreferences.getThemeColor(context)) {

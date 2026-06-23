@@ -2,25 +2,20 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:importantForAutofill="noExcludeDescendants">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_add_course_panel"
         android:orientation="vertical"
-        android:padding="0dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_add_course_panel"
-            android:orientation="vertical"
-            android:padding="12dp">
+        android:padding="12dp">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="课程信息"
+                android:text="@string/manual_course_info"
                 android:textColor="#6A4321"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -29,7 +24,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="课程名称"
+                android:labelFor="@id/inputCourseName"
+                android:text="@string/manual_course_name"
                 android:textColor="#7A5732"
                 android:textSize="12sp" />
 
@@ -39,6 +35,7 @@
                 android:layout_height="40dp"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_add_course_input"
+                android:inputType="textCapWords"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:textColor="#4A321C"
@@ -48,7 +45,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="授课教师（可留空）"
+                android:labelFor="@id/inputTeacher"
+                android:text="@string/manual_teacher_optional"
                 android:textColor="#7A5732"
                 android:textSize="12sp" />
 
@@ -58,6 +56,7 @@
                 android:layout_height="40dp"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_add_course_input"
+                android:inputType="textPersonName"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:textColor="#4A321C"
@@ -67,7 +66,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="上课地点（可留空）"
+                android:labelFor="@id/inputLocation"
+                android:text="@string/manual_location_optional"
                 android:textColor="#7A5732"
                 android:textSize="12sp" />
 
@@ -77,6 +77,7 @@
                 android:layout_height="40dp"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_add_course_input"
+                android:inputType="text"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:textColor="#4A321C"
@@ -86,7 +87,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="时间信息"
+                android:text="@string/manual_time_info"
                 android:textColor="#6A4321"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -95,7 +96,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="星期"
+                android:text="@string/manual_weekday"
                 android:textColor="#7A5732"
                 android:textSize="12sp" />
 
@@ -116,7 +117,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="开始节"
+                    android:labelFor="@id/inputStartSection"
+                    android:text="@string/manual_start_section"
                     android:textColor="#7A5732"
                     android:textSize="12sp" />
 
@@ -125,7 +127,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
-                    android:text="结束节"
+                    android:labelFor="@id/inputEndSection"
+                    android:text="@string/manual_end_section"
                     android:textColor="#7A5732"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -172,7 +175,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="开始周"
+                    android:labelFor="@id/inputStartWeek"
+                    android:text="@string/manual_start_week"
                     android:textColor="#7A5732"
                     android:textSize="12sp" />
 
@@ -181,7 +185,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
-                    android:text="结束周"
+                    android:labelFor="@id/inputEndWeek"
+                    android:text="@string/manual_end_week"
                     android:textColor="#7A5732"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -222,7 +227,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="单双周规则"
+                android:text="@string/manual_parity_rule"
                 android:textColor="#7A5732"
                 android:textSize="12sp" />
 
@@ -238,7 +243,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="单双周都上"
+                    android:text="@string/manual_parity_all"
                     android:textColor="#5A3D1F" />
 
                 <RadioButton
@@ -246,7 +251,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="仅单周"
+                    android:text="@string/manual_parity_odd"
                     android:textColor="#5A3D1F" />
 
                 <RadioButton
@@ -254,11 +259,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="仅双周"
+                    android:text="@string/manual_parity_even"
                     android:textColor="#5A3D1F" />
             </RadioGroup>
 
             <LinearLayout
+                style="?android:attr/buttonBarStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
@@ -267,25 +273,25 @@
 
                 <Button
                     android:id="@+id/cancelManualAddButton"
+                    style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
                     android:background="#33FFFFFF"
-                    android:text="取消"
+                    android:text="@string/action_cancel"
                     android:textAllCaps="false"
                     android:textColor="#5A3D1F" />
 
                 <Button
                     android:id="@+id/saveManualAddButton"
+                    style="?android:attr/buttonBarButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
                     android:layout_marginStart="8dp"
                     android:background="#EFD7B1"
-                    android:text="保存"
+                    android:text="@string/action_save"
                     android:textAllCaps="false"
                     android:textColor="#4A321C" />
             </LinearLayout>
-
-        </LinearLayout>
 
     </LinearLayout>
 
