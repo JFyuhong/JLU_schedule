@@ -18,6 +18,7 @@ import androidx.fragment.app.Fragment
 import cn.jlu.schedule.MainActivity
 import cn.jlu.schedule.R
 import cn.jlu.schedule.data.AppPreferences
+import cn.jlu.schedule.data.ImportedScheduleStorage
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
 import com.yalantis.ucrop.UCrop
@@ -100,7 +101,7 @@ class SettingsFragment : Fragment() {
             AppPreferences.setDefaultOpenPage(requireContext(), page)
         }
 
-        val semesterStartDate = AppPreferences.getSemesterStartDate(requireContext())
+        val semesterStartDate = ImportedScheduleStorage.getActiveSemesterStartDate(requireContext())
         semesterStartDateText.text = semesterStartDate.format(DateTimeFormatter.ofPattern("yyyy/M/d"))
         changeSemesterStartButton.setOnClickListener {
             showSemesterDatePicker(semesterStartDateText)
@@ -165,13 +166,14 @@ class SettingsFragment : Fragment() {
     }
 
     private fun showSemesterDatePicker(dateTextView: TextView) {
-        val current = AppPreferences.getSemesterStartDate(requireContext())
+        val current = ImportedScheduleStorage.getActiveSemesterStartDate(requireContext())
         DatePickerDialog(
             requireContext(),
             { _, year, month, dayOfMonth ->
                 val selected = LocalDate.of(year, month + 1, dayOfMonth)
-                AppPreferences.setSemesterStartDate(requireContext(), selected)
-                dateTextView.text = selected.format(DateTimeFormatter.ofPattern("yyyy/M/d"))
+                ImportedScheduleStorage.setActiveSemesterStartDate(requireContext(), selected)
+                val normalized = ImportedScheduleStorage.getActiveSemesterStartDate(requireContext())
+                dateTextView.text = normalized.format(DateTimeFormatter.ofPattern("yyyy/M/d"))
                 activity?.recreate()
             },
             current.year,

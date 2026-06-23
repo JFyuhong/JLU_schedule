@@ -1,7 +1,9 @@
 package cn.jlu.schedule.ui.settings
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +16,10 @@ import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import androidx.core.graphics.ColorUtils
 import cn.jlu.schedule.R
 import cn.jlu.schedule.data.ImportedScheduleStorage
 import cn.jlu.schedule.ui.theme.ThemePalette
@@ -22,6 +28,7 @@ import cn.jlu.schedule.ui.theme.UiFeedback
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class TimetableManageActivity : AppCompatActivity() {
     private lateinit var listView: ListView
@@ -47,6 +54,7 @@ class TimetableManageActivity : AppCompatActivity() {
         listView.divider = null
         listView.dividerHeight = 0
 
+        applySystemBarInsets()
         applyTheme()
         bindEvents()
         refreshProfiles()
@@ -67,8 +75,28 @@ class TimetableManageActivity : AppCompatActivity() {
         UiFeedback.stylePrimaryButton(createButton, palette)
     }
 
+    private fun applySystemBarInsets() {
+        val root = findViewById<View>(R.id.manageRoot)
+        val baseLeft = root.paddingLeft
+        val baseTop = root.paddingTop
+        val baseRight = root.paddingRight
+        val baseBottom = root.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(
+                left = baseLeft + bars.left,
+                top = baseTop + bars.top,
+                right = baseRight + bars.right,
+                bottom = baseBottom + bars.bottom
+            )
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
+    }
+
     private fun bindEvents() {
         createButton.setOnClickListener {
+            @SuppressLint("SetTextI18n")
             val input = EditText(this).apply {
                 hint = "新课表名称（可留空）"
                 setText("课表${System.currentTimeMillis() % 100000}")
@@ -96,7 +124,7 @@ class TimetableManageActivity : AppCompatActivity() {
 
     private fun refreshProfiles() {
         adapter.submit(ImportedScheduleStorage.listProfiles(this))
-        subTitleView.text = "共 ${adapter.count} 个课表，点按可切换当前课表"
+        subTitleView.text = String.format(Locale.getDefault(), "共 %d 个课表，点按可切换当前课表", adapter.count)
     }
 
     private inner class ProfileAdapter : BaseAdapter() {
@@ -127,10 +155,15 @@ class TimetableManageActivity : AppCompatActivity() {
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime()
             nameView.text = item.name
-            subView.text = "最近更新：${localTime.format(dateFormatter)}"
+            subView.text = String.format(Locale.getDefault(), "最近更新：%s", localTime.format(dateFormatter))
             currentBadge.visibility = if (item.isActive) View.VISIBLE else View.GONE
 
             val palette = ThemePaletteProvider.fromContext(this@TimetableManageActivity)
+            view.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 12f
+                setColor(ColorUtils.setAlphaComponent(palette.panelAltBackground, 150))
+            }
             nameView.setTextColor(palette.textPrimary)
             subView.setTextColor(palette.textSecondary)
             currentBadge.setTextColor(palette.buttonText)

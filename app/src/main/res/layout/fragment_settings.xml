@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#44FFF2DA">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,7 +12,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="设置"
+            android:text="@string/settings_title"
             android:textColor="#5A3D1F"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -22,7 +21,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="课表管理"
+            android:text="@string/settings_timetable_manage"
             android:textColor="#7A5A37"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -32,14 +31,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="打开课表管理页"
+            android:text="@string/settings_open_timetable_manage"
             android:textAllCaps="false" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="启动默认页面"
+            android:text="@string/settings_default_page"
             android:textColor="#7A5A37"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -55,7 +54,7 @@
                 android:id="@+id/defaultOpenTimetable"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="课表"
+                android:text="@string/nav_timetable"
                 android:textColor="#5A3D1F"
                 android:textSize="14sp" />
 
@@ -63,7 +62,7 @@
                 android:id="@+id/defaultOpenToday"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="日程"
+                android:text="@string/nav_today"
                 android:textColor="#5A3D1F"
                 android:textSize="14sp" />
         </RadioGroup>
@@ -72,7 +71,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="学期开始周（第一周起始日期）"
+            android:text="@string/settings_semester_start"
             android:textColor="#7A5A37"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -96,7 +95,7 @@
                 android:id="@+id/changeSemesterStartButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="修改"
+                android:text="@string/settings_change"
                 android:textAllCaps="false" />
         </LinearLayout>
 
@@ -104,7 +103,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="主题色"
+            android:text="@string/settings_theme"
             android:textColor="#7A5A37"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -120,7 +119,7 @@
                 android:id="@+id/themeWarm"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="暖色"
+                android:text="@string/settings_theme_warm"
                 android:textColor="#5A3D1F"
                 android:textSize="14sp" />
 
@@ -128,7 +127,7 @@
                 android:id="@+id/themeOcean"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="海蓝"
+                android:text="@string/settings_theme_ocean"
                 android:textColor="#5A3D1F"
                 android:textSize="14sp" />
 
@@ -136,7 +135,7 @@
                 android:id="@+id/themeMint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="薄荷"
+                android:text="@string/settings_theme_mint"
                 android:textColor="#5A3D1F"
                 android:textSize="14sp" />
         </RadioGroup>
@@ -145,7 +144,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="课表字号"
+            android:text="@string/settings_font_scale"
             android:textColor="#7A5A37"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -161,7 +160,7 @@
                 android:id="@+id/fontSmall"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="小号"
+                android:text="@string/settings_font_small"
                 android:textColor="#5A3D1F"
                 android:textSize="14sp" />
 
@@ -169,7 +168,7 @@
                 android:id="@+id/fontNormal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="标准"
+                android:text="@string/settings_font_normal"
                 android:textColor="#5A3D1F"
                 android:textSize="14sp" />
 
@@ -177,7 +176,7 @@
                 android:id="@+id/fontLarge"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="大号"
+                android:text="@string/settings_font_large"
                 android:textColor="#5A3D1F"
                 android:textSize="14sp" />
         </RadioGroup>
@@ -186,7 +185,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="非本周课程"
+            android:text="@string/settings_non_current"
             android:textColor="#7A5A37"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -196,7 +195,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="显示非本周课程"
+            android:text="@string/settings_show_non_current"
             android:textColor="#5A3D1F"
             android:textSize="14sp" />
 
@@ -204,12 +203,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="自定义背景"
+            android:text="@string/settings_custom_background"
             android:textColor="#7A5A37"
             android:textSize="15sp"
             android:textStyle="bold" />
 
         <LinearLayout
+            style="?android:attr/buttonBarStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -217,19 +217,21 @@
 
             <Button
                 android:id="@+id/chooseBackgroundButton"
+                style="?android:attr/buttonBarButtonStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="选择并裁剪"
+                android:text="@string/settings_choose_crop"
                 android:textAllCaps="false" />
 
             <Button
                 android:id="@+id/clearBackgroundButton"
+                style="?android:attr/buttonBarButtonStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="恢复默认"
+                android:text="@string/settings_restore_default"
                 android:textAllCaps="false" />
         </LinearLayout>
 
@@ -237,7 +239,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="支持从相册选择后截取，保存为应用背景。"
+            android:text="@string/settings_background_hint"
             android:textColor="#7A5A37"
             android:textSize="13sp" />
 

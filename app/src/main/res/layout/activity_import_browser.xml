@@ -3,7 +3,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FFF2DA"
     android:fitsSystemWindows="true">
 
     <LinearLayout
@@ -22,7 +21,8 @@
             android:layout_height="40dp"
             android:layout_weight="1"
             android:background="#F7E7CC"
-            android:hint="输入网址"
+            android:autofillHints="url"
+            android:hint="@string/import_url_hint"
             android:imeOptions="actionGo"
             android:inputType="textUri"
             android:paddingStart="10dp"
@@ -37,7 +37,7 @@
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
             android:background="#D8D8D8"
-            android:text="前往"
+            android:text="@string/import_go"
             android:textAllCaps="false"
             android:textColor="#222222" />
     </LinearLayout>
@@ -72,9 +72,24 @@
             android:background="#D8D8D8"
             android:drawableStart="@android:drawable/ic_menu_save"
             android:drawablePadding="6dp"
-            android:text="从此处导入"
+            android:text="@string/import_from_here"
             android:textAllCaps="false"
             android:textColor="#222222" />
+
+        <TextView
+            android:id="@+id/captureStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="18dp"
+            android:maxWidth="240dp"
+            android:paddingStart="10dp"
+            android:paddingTop="7dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="7dp"
+            android:text="@string/import_capture_status_initial"
+            android:textSize="12sp" />
     </FrameLayout>
 
 </LinearLayout>

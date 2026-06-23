@@ -4,7 +4,6 @@
     android:id="@+id/rootContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7E7CC"
     android:fitsSystemWindows="true">
 
     <ImageView
@@ -13,6 +12,8 @@
         android:layout_height="match_parent"
         android:adjustViewBounds="false"
         android:alpha="0.92"
+        android:contentDescription="@null"
+        android:importantForAccessibility="no"
         android:scaleType="centerCrop"
         android:visibility="gone" />
 

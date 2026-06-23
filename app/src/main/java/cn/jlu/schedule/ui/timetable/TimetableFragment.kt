@@ -32,6 +32,7 @@ import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class TimetableFragment : Fragment() {
     private val periodTimeRanges = listOf(
@@ -145,7 +146,7 @@ class TimetableFragment : Fragment() {
 
         val courses = runCatching { ImportedScheduleStorage.loadCoursesOrSampleAsset(ctx, "sample_schedule.do") }
             .getOrElse { emptyList() }
-        val semesterStart = AppPreferences.getSemesterStartDate(ctx)
+        val semesterStart = ImportedScheduleStorage.getActiveSemesterStartDate(ctx)
         val fontScale = AppPreferences.getTimetableFontScale(ctx)
         val theme = AppPreferences.getThemeColor(ctx)
         val hasCustomBackground = !AppPreferences.getCustomBackgroundUri(ctx).isNullOrBlank()
@@ -272,8 +273,8 @@ class TimetableFragment : Fragment() {
         val guessWeek = currentWeekIndex.coerceAtLeast(1)
         startSectionInput.setText("1")
         endSectionInput.setText("2")
-        startWeekInput.setText(guessWeek.toString())
-        endWeekInput.setText(guessWeek.toString())
+        startWeekInput.setText(String.format(Locale.getDefault(), "%d", guessWeek))
+        endWeekInput.setText(String.format(Locale.getDefault(), "%d", guessWeek))
 
         val cancelButton = formView.findViewById<android.widget.Button>(R.id.cancelManualAddButton)
         val saveButton = formView.findViewById<android.widget.Button>(R.id.saveManualAddButton)
@@ -292,14 +293,48 @@ class TimetableFragment : Fragment() {
         saveButton.setOnClickListener {
             val name = nameInput.text?.toString()?.trim().orEmpty()
             if (name.isBlank()) {
+                nameInput.error = "课程名不能为空"
                 UiFeedback.showMessage(view, "课程名不能为空", ThemePaletteProvider.fromContext(ctx))
                 return@setOnClickListener
             }
+            if (name.length > MAX_MANUAL_COURSE_NAME_LENGTH) {
+                nameInput.error = "课程名过长"
+                UiFeedback.showMessage(view, "课程名最多 ${MAX_MANUAL_COURSE_NAME_LENGTH} 个字符", ThemePaletteProvider.fromContext(ctx))
+                return@setOnClickListener
+            }
 
-            val startSection = startSectionInput.text?.toString()?.toIntOrNull() ?: 1
-            val endSection = endSectionInput.text?.toString()?.toIntOrNull() ?: startSection
-            val startWeek = startWeekInput.text?.toString()?.toIntOrNull() ?: guessWeek
-            val endWeek = endWeekInput.text?.toString()?.toIntOrNull() ?: startWeek
+            val teacher = teacherInput.text?.toString()?.trim().orEmpty()
+            if (teacher.length > MAX_MANUAL_TEXT_LENGTH) {
+                teacherInput.error = "教师名称过长"
+                UiFeedback.showMessage(view, "教师名称最多 ${MAX_MANUAL_TEXT_LENGTH} 个字符", ThemePaletteProvider.fromContext(ctx))
+                return@setOnClickListener
+            }
+            val location = locationInput.text?.toString()?.trim().orEmpty()
+            if (location.length > MAX_MANUAL_TEXT_LENGTH) {
+                locationInput.error = "地点过长"
+                UiFeedback.showMessage(view, "地点最多 ${MAX_MANUAL_TEXT_LENGTH} 个字符", ThemePaletteProvider.fromContext(ctx))
+                return@setOnClickListener
+            }
+
+            val startSection = parseBoundedInt(startSectionInput, 1, 12, "开始节")
+                ?: return@setOnClickListener
+            val endSection = parseBoundedInt(endSectionInput, 1, 12, "结束节")
+                ?: return@setOnClickListener
+            if (endSection < startSection) {
+                endSectionInput.error = "结束节不能小于开始节"
+                UiFeedback.showMessage(view, "结束节不能小于开始节", ThemePaletteProvider.fromContext(ctx))
+                return@setOnClickListener
+            }
+
+            val startWeek = parseBoundedInt(startWeekInput, 1, 30, "开始周")
+                ?: return@setOnClickListener
+            val endWeek = parseBoundedInt(endWeekInput, 1, 30, "结束周")
+                ?: return@setOnClickListener
+            if (endWeek < startWeek) {
+                endWeekInput.error = "结束周不能小于开始周"
+                UiFeedback.showMessage(view, "结束周不能小于开始周", ThemePaletteProvider.fromContext(ctx))
+                return@setOnClickListener
+            }
             val weekday = when (weekdaySpinner.selectedItemPosition) {
                 0 -> Weekday.MONDAY
                 1 -> Weekday.TUESDAY
@@ -319,8 +354,8 @@ class TimetableFragment : Fragment() {
                 ctx,
                 ImportedScheduleStorage.ManualCourseInput(
                     courseName = name,
-                    teacher = teacherInput.text?.toString()?.trim().orEmpty(),
-                    location = locationInput.text?.toString()?.trim().orEmpty(),
+                    teacher = teacher,
+                    location = location,
                     weekday = weekday,
                     startSection = startSection,
                     endSection = endSection,
@@ -334,6 +369,23 @@ class TimetableFragment : Fragment() {
             activity?.recreate()
         }
         dialog.show()
+    }
+
+    private fun parseBoundedInt(input: EditText, min: Int, max: Int, label: String): Int? {
+        val raw = input.text?.toString()?.trim().orEmpty()
+        val value = raw.toIntOrNull()
+        if (value == null) {
+            input.error = "${label}必须是数字"
+            UiFeedback.showMessage(view, "${label}必须是数字", ThemePaletteProvider.fromContext(requireContext()))
+            return null
+        }
+        if (value !in min..max) {
+            input.error = "${label}范围是 ${min}-${max}"
+            UiFeedback.showMessage(view, "${label}范围是 ${min}-${max}", ThemePaletteProvider.fromContext(requireContext()))
+            return null
+        }
+        input.error = null
+        return value
     }
 
     private fun guessCurrentWeek(totalWeeks: Int, semesterStart: LocalDate): Int {
@@ -353,5 +405,10 @@ class TimetableFragment : Fragment() {
             6 -> Weekday.SATURDAY
             else -> Weekday.SUNDAY
         }
+    }
+
+    companion object {
+        private const val MAX_MANUAL_COURSE_NAME_LENGTH = 40
+        private const val MAX_MANUAL_TEXT_LENGTH = 40
     }
 }

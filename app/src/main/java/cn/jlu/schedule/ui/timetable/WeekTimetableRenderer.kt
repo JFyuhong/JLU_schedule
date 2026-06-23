@@ -1,5 +1,6 @@
 package cn.jlu.schedule.ui.timetable
 
+import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -14,6 +15,7 @@ import cn.jlu.schedule.model.Weekday
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class WeekTimetableRenderer(
     private val periodRanges: List<String>,
@@ -86,6 +88,7 @@ class WeekTimetableRenderer(
         buildBody(bodyRow, metrics, items, onCourseClick, weekStart, today, currentSection)
     }
 
+    @SuppressLint("SetTextI18n")
     private fun buildHeader(
         headerRow: LinearLayout,
         m: TimetableMetrics.Spec,
@@ -95,7 +98,7 @@ class WeekTimetableRenderer(
         val context = headerRow.context
         val corner = TextView(context).apply {
             layoutParams = LinearLayout.LayoutParams(m.leftColumnWidth, m.headerCellHeight)
-            text = "${weekStart.monthValue}月"
+            text = String.format(Locale.getDefault(), "%d月", weekStart.monthValue)
             gravity = Gravity.CENTER
             textSize = 11f * fontScale
             setTypeface(typeface, Typeface.BOLD)
@@ -112,7 +115,12 @@ class WeekTimetableRenderer(
                 layoutParams = LinearLayout.LayoutParams(m.dayColumnWidth, m.headerCellHeight).apply {
                     marginStart = m.cellGap
                 }
-                text = "${weekdayLabels[weekday] ?: "一"}\n${date.format(DateTimeFormatter.ofPattern("M/d"))}"
+                text = String.format(
+                    Locale.getDefault(),
+                    "%s\n%s",
+                    weekdayLabels[weekday] ?: "一",
+                    date.format(DateTimeFormatter.ofPattern("M/d"))
+                )
                 gravity = Gravity.CENTER
                 textSize = 11f * fontScale
                 setTypeface(typeface, Typeface.BOLD)
@@ -151,7 +159,7 @@ class WeekTimetableRenderer(
                 background = roundedBackground(withAlpha(palette.leftColumn, panelAlpha), radius = 8f)
             }
             val label = TextView(context).apply {
-                text = "${index + 1}"
+                text = String.format(Locale.getDefault(), "%d", index + 1)
                 textSize = 12f * fontScale
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
