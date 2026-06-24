@@ -110,6 +110,25 @@ class DoScheduleParserTest {
         assertNotNull(courses.single().meetings.single())
     }
 
+    @Test
+    fun parse_usesSemesterCodeWhenDisplayValueIsBlank() {
+        val courses = DoScheduleParser.parse(
+            scheduleJson(
+                """
+                    {
+                      "KCM": "概率论",
+                      "SKJS": "赵六",
+                      "XNXQDM": "2026-2027-1",
+                      "XNXQDM_DISPLAY": "",
+                      "YPSJDD": "1-16周 星期五 第1节-第2节 三教101"
+                    }
+                """.trimIndent()
+            )
+        )
+
+        assertEquals("2026-2027-1", courses.single().semester)
+    }
+
     private fun scheduleJson(rows: String): String {
         return """
             {

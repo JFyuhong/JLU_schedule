@@ -57,6 +57,25 @@ class ScheduleImportCacheParserTest {
     }
 
     @Test
+    fun parse_keepsEquivalentSemesterFormatsAndBlankSemesterRowsFromLatestBatch() {
+        val latest = cacheFile("mixed.json", "https://example.edu/modules/xskcb/cxxszhxqkb.do", 3)
+
+        val result = ScheduleImportCacheParser.parse(
+            entries = listOf(latest),
+            courseParser = {
+                listOf(
+                    course("代码学期", "2026-2027-1"),
+                    course("显示学期", "2026-2027学年第一学期"),
+                    course("空学期字段", "")
+                )
+            }
+        )
+
+        assertEquals(3, result.courses.size)
+        assertEquals(listOf("代码学期", "显示学期", "空学期字段"), result.courses.map { it.courseName })
+    }
+
+    @Test
     fun parse_rejectsMalformedSchedulePayloadWithoutThrowing() {
         val broken = cacheFile("broken.json", "https://example.edu/modules/xskcb/cxxszhxqkb.do", 1)
 

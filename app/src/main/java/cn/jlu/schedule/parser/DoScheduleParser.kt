@@ -43,7 +43,8 @@ object DoScheduleParser {
             CourseSchedule(
                 courseName = row.courseName.orEmpty(),
                 teacher = row.teacher.orEmpty(),
-                semester = row.semesterDisplay ?: row.semesterCode.orEmpty(),
+                semester = row.semesterDisplay?.trim()?.takeIf { it.isNotBlank() }
+                    ?: row.semesterCode.orEmpty().trim(),
                 credit = row.credit.asDoubleOrNull(),
                 rawWeekText = row.weekText.orEmpty(),
                 meetings = parseMeetings(row)

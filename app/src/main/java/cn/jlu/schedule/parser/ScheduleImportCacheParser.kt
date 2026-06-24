@@ -8,7 +8,7 @@ import java.time.LocalDate
 object ScheduleImportCacheParser {
     private const val TARGET_SCHEDULE_FILE = "cxxszhxqkb.do"
     private const val MAX_PARSE_FILE_BYTES = 2 * 1024 * 1024L
-    private const val MIN_SCHEDULE_PAYLOAD_BYTES = 400
+    private const val MIN_SCHEDULE_PAYLOAD_BYTES = 80
 
     data class CacheEntry(
         val url: String,
@@ -36,7 +36,8 @@ object ScheduleImportCacheParser {
     private data class ParsedScheduleBatch(
         val entry: CacheEntry,
         val courses: List<CourseSchedule>,
-        val semesterKey: String
+        val semesterKey: String,
+        val semesterLabel: String
     )
 
     fun parse(
@@ -90,7 +91,8 @@ object ScheduleImportCacheParser {
             batches += ParsedScheduleBatch(
                 entry = entry,
                 courses = parsed,
-                semesterKey = dominantSemester(parsed)
+                semesterKey = dominantSemesterKey(parsed),
+                semesterLabel = dominantSemesterLabel(parsed)
             )
         }
 
@@ -118,13 +120,16 @@ object ScheduleImportCacheParser {
                 if (latestBatch.semesterKey.isBlank()) {
                     courses
                 } else {
-                    courses.filter { it.semester.trim() == latestBatch.semesterKey }
+                    courses.filter { course ->
+                        val courseKey = semesterKey(course.semester)
+                        courseKey.isBlank() || courseKey == latestBatch.semesterKey
+                    }
                 }
             }
 
         return ParseResult(
             courses = selectedCourses,
-            selectedSemester = latestBatch.semesterKey,
+            selectedSemester = latestBatch.semesterLabel.ifBlank { latestBatch.semesterKey },
             inferredSemesterStartDate = SemesterStartDatePolicy.inferFromCoursesOrNull(selectedCourses),
             scannedEntries = candidates.size,
             parsedBatchCount = batches.size,
@@ -152,15 +157,38 @@ object ScheduleImportCacheParser {
             url.contains("modules/xskcb", ignoreCase = true)
     }
 
-    private fun dominantSemester(courses: List<CourseSchedule>): String {
+    private fun dominantSemesterKey(courses: List<CourseSchedule>): String {
         return courses
-            .map { it.semester.trim() }
+            .map { semesterKey(it.semester) }
             .filter { it.isNotBlank() }
             .groupingBy { it }
             .eachCount()
             .maxByOrNull { it.value }
             ?.key
             .orEmpty()
+    }
+
+    private fun dominantSemesterLabel(courses: List<CourseSchedule>): String {
+        val key = dominantSemesterKey(courses)
+        if (key.isBlank()) {
+            return ""
+        }
+        return courses
+            .map { it.semester.trim() }
+            .filter { it.isNotBlank() && semesterKey(it) == key }
+            .groupingBy { it }
+            .eachCount()
+            .maxByOrNull { it.value }
+            ?.key
+            .orEmpty()
+    }
+
+    private fun semesterKey(label: String): String {
+        val raw = label.trim()
+        if (raw.isBlank()) {
+            return ""
+        }
+        return SemesterStartDatePolicy.normalizedSemesterKey(raw) ?: raw
     }
 
     private fun prioritizeCandidates(entries: List<CacheEntry>): List<CacheEntry> {

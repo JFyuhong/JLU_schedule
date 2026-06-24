@@ -26,6 +26,22 @@ object SemesterStartDatePolicy {
     }
 
     fun inferFromSemesterLabelOrNull(label: String): LocalDate? {
+        val key = normalizedSemesterKey(label)
+        if (key != null) {
+            val parts = key.split("-")
+            if (parts.size == 3) {
+                return startDateForTerm(
+                    firstYear = parts[0].toIntOrNull() ?: return null,
+                    secondYear = parts[1].toIntOrNull() ?: return null,
+                    term = parts[2]
+                )
+            }
+        }
+
+        return null
+    }
+
+    fun normalizedSemesterKey(label: String): String? {
         val normalized = label.trim()
         if (normalized.isBlank()) {
             return null
@@ -34,19 +50,19 @@ object SemesterStartDatePolicy {
         codePattern.find(normalized)?.let { match ->
             val firstYear = match.groupValues[1].toIntOrNull() ?: return null
             val secondYear = match.groupValues[2].toIntOrNull() ?: return null
-            return startDateForTerm(firstYear, secondYear, match.groupValues[3])
+            return "$firstYear-$secondYear-${match.groupValues[3]}"
         }
 
         yearRangePattern.find(normalized)?.let { match ->
             val firstYear = match.groupValues[1].toIntOrNull() ?: return null
             val secondYear = match.groupValues[2].toIntOrNull() ?: return null
             val term = when {
-                normalized.contains("第一") || normalized.contains("秋") -> "1"
-                normalized.contains("第二") || normalized.contains("春") -> "2"
+                normalized.contains("第一") || normalized.contains("第1") || normalized.contains("秋") -> "1"
+                normalized.contains("第二") || normalized.contains("第2") || normalized.contains("春") -> "2"
                 else -> null
             }
             if (term != null) {
-                return startDateForTerm(firstYear, secondYear, term)
+                return "$firstYear-$secondYear-$term"
             }
         }
 
