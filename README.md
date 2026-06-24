@@ -6,6 +6,17 @@
 
 JLU_schedule 是一个面向吉大学生的 Android 课表工具，支持通过教务网页导入课表、管理多份课表、手动补课、查看今日课程，并提供可切换的主题外观。
 
+## APK下载
+
+- Android: 前往Releases页下载[Releases](https://github.com/JFyuhong/JLU_schedule/releases)
+- ios: 如果你能帮我搞定`99$/每年`的开发者计划的话，开发一个也不是不行😂
+
+## 效果截图
+
+| 课表 | 设置 |
+| -- | -- |
+| ![](media/t1.jpg) | ![](media/t2.jpg) |
+
 ## 主要功能
 
 - 教务课表解析
