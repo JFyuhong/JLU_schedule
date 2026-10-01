@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ProfileStore } from '../core/ProfileStore';
+import { isLikelyGradePayload } from '../core/GradeTranscriptParser';
+import { isLikelyExamPayload } from '../core/ExamScheduleParser';
+import { isLikelyPyfaPayload, parseAcademicProgress } from '../core/PyfaTranscriptParser';
+import { GpaStore } from '../core/GpaStore';
+import { ExamStore } from '../core/ExamStore';
 import {
   Bookmark,
   Copy,
@@ -25,7 +30,7 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
   // Dynamic PWA origin for the Bookmarklet script
   const pwaBaseUrl = window.location.href.split('#')[0];
 
-  // The Safari Bookmarklet code
+  // The Safari Bookmarklet code supporting schedule, grades, exams, and pyfa
   const bookmarkletCode = `javascript:(function(){
   var targetUrl = '${pwaBaseUrl}';
   function sendData(jsonStr){
@@ -35,7 +40,11 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
       }
     } catch(e){}
     var encoded = encodeURIComponent(jsonStr);
-    window.location.href = targetUrl + '#import_data=' + encoded;
+    var hashType = '#import_data=';
+    if (jsonStr.indexOf('xscjcx') !== -1) hashType = '#import_grades=';
+    else if (jsonStr.indexOf('cxxsapxx') !== -1 || jsonStr.indexOf('KSSJ') !== -1 || jsonStr.indexOf('xskscx') !== -1) hashType = '#import_exams=';
+    else if (jsonStr.indexOf('FAJDMC') !== -1 || jsonStr.indexOf('YQJDXF') !== -1) hashType = '#import_progress=';
+    window.location.href = targetUrl + hashType + encoded;
   }
   
   if (document.body && document.body.innerText && document.body.innerText.indexOf('"datas"') !== -1 && document.body.innerText.indexOf('"rows"') !== -1) {
@@ -43,7 +52,15 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
     return;
   }
   
-  fetch('/resService/jwxt/teacher/studentquery/xskcb.do?responseType=json', {
+  var currentUrl = window.location.href;
+  var fetchUrl = '/resService/jwxt/teacher/studentquery/xskcb.do?responseType=json';
+  if (currentUrl.indexOf('cjcx') !== -1 || currentUrl.indexOf('score') !== -1) {
+    fetchUrl = '/resService/jwxt/cjcx/modules/cjcx/xscjcx.do?responseType=json';
+  } else if (currentUrl.indexOf('ks') !== -1 || currentUrl.indexOf('exam') !== -1) {
+    fetchUrl = '/resService/jwxt/cxxsap/modules/cxxsapxx/cxxsapxx.do?responseType=json';
+  }
+  
+  fetch(fetchUrl, {
     headers: { 'Accept': 'application/json, text/plain, */*' }
   }).then(function(res){
     return res.text();
@@ -51,10 +68,10 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
     if (text.indexOf('"datas"') !== -1) {
       sendData(text);
     } else {
-      alert('未捕获到课表数据，请确保已登录并在学生课表页面！');
+      alert('未捕获到有效数据，请确保已登录教务系统！');
     }
   }).catch(function(err){
-    alert('请求课表失败，请在教务系统课表详情页面重试：' + err.message);
+    alert('请求教务数据失败：' + err.message);
   });
 })();`.replace(/\n\s*/g, '');
 
@@ -64,21 +81,74 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
     setTimeout(() => setCopiedBookmarklet(false), 2500);
   };
 
-  // Check URL hash for incoming import_data
+  const processImportPayload = (raw: string, mode: 'overwrite' | 'new', newName?: string) => {
+    // 1. Academic Progress / Pyfa
+    if (isLikelyPyfaPayload(raw)) {
+      const plan = parseAcademicProgress(raw);
+      if (plan && plan.requirements.length > 0) {
+        localStorage.setItem('jlu_schedule_academic_progress', JSON.stringify(plan));
+        setStatusMessage({
+          type: 'success',
+          text: `成功导入培养方案学业进度（共 ${plan.requirements.length} 个培养模块，已获 ${plan.totalEarnedCredits} / 计划 ${plan.totalRequiredCredits} 学分）！`,
+        });
+        return;
+      }
+    }
+
+    // 2. Grades / Transcript
+    if (isLikelyGradePayload(raw)) {
+      const count = GpaStore.getInstance().importFromTranscript(raw);
+      if (count > 0) {
+        setStatusMessage({
+          type: 'success',
+          text: `成功导入 ${count} 门课程成绩并同步至绩点计算器！`,
+        });
+        return;
+      }
+    }
+
+    // 3. Exam Schedule
+    if (isLikelyExamPayload(raw)) {
+      const count = ExamStore.getInstance().importFromJson(raw);
+      if (count > 0) {
+        setStatusMessage({
+          type: 'success',
+          text: `成功导入 ${count} 门考试安排并已同步至考试倒计时！`,
+        });
+        return;
+      }
+    }
+
+    // 4. Backup JSON (v1)
+    if (raw.includes('"version"') && raw.includes('"profiles"')) {
+      const store = ProfileStore.getInstance();
+      const count = store.importBackup(raw);
+      setStatusMessage({ type: 'success', text: `成功从跨平台备份恢复 ${count} 份课表！` });
+      onImportSuccess();
+      return;
+    }
+
+    // 5. Timetable Schedule (default)
+    const store = ProfileStore.getInstance();
+    const res = store.importSchedule(raw, mode, newName);
+    setStatusMessage({
+      type: 'success',
+      text: `成功导入课表，共 ${res.courseCount} 门课程！`,
+    });
+    onImportSuccess();
+  };
+
+  // Check URL hash for incoming import payloads
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash;
-      if (hash.startsWith('#import_data=')) {
+      const prefixes = ['#import_data=', '#import_grades=', '#import_exams=', '#import_progress='];
+      const matched = prefixes.find((p) => hash.startsWith(p));
+      if (matched) {
         try {
-          const raw = decodeURIComponent(hash.substring('#import_data='.length));
-          const store = ProfileStore.getInstance();
-          const result = store.importSchedule(raw, 'new');
-          setStatusMessage({
-            type: 'success',
-            text: `通过 Safari 书签成功导入 ${result.courseCount} 门课程！`,
-          });
+          const raw = decodeURIComponent(hash.substring(matched.length));
+          processImportPayload(raw, 'new');
           window.location.hash = '';
-          onImportSuccess();
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
           setStatusMessage({
@@ -95,29 +165,13 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
 
   const handleManualImport = () => {
     if (!jsonText.trim()) {
-      setStatusMessage({ type: 'error', text: '请先粘贴课表 JSON 数据或备份数据' });
+      setStatusMessage({ type: 'error', text: '请先粘贴课表、成绩单、考试或备份 JSON 数据' });
       return;
     }
-    const store = ProfileStore.getInstance();
     try {
-      // First check if it's a version 1 backup file
-      if (jsonText.includes('"version"') && jsonText.includes('"profiles"')) {
-        const count = store.importBackup(jsonText);
-        setStatusMessage({ type: 'success', text: `成功从备份恢复 ${count} 份课表！` });
-        setJsonText('');
-        onImportSuccess();
-        return;
-      }
-
-      // Otherwise parse as xskcb.do JSON
-      const res = store.importSchedule(jsonText, importMode, newProfileName);
-      setStatusMessage({
-        type: 'success',
-        text: `成功导入 ${res.courseCount} 门课程！`,
-      });
+      processImportPayload(jsonText, importMode, newProfileName);
       setJsonText('');
       setNewProfileName('');
-      onImportSuccess();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setStatusMessage({ type: 'error', text: `解析失败: ${msg}` });
@@ -128,7 +182,7 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
     try {
       const text = await navigator.clipboard.readText();
       if (!text || !text.includes('{')) {
-        setStatusMessage({ type: 'error', text: '剪贴板中未发现有效的课表 JSON' });
+        setStatusMessage({ type: 'error', text: '剪贴板中未发现有效的数据 JSON' });
         return;
       }
       setJsonText(text);
@@ -255,7 +309,7 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
           </div>
 
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-            在 Safari 登录吉大教务后，轻点一下书签即可自动捕获课表数据并跳转导入，无需手动复制大段文本。
+            在 Safari 登录吉大教务后，进入「学生课表」、「成绩查询」或「考试安排」页面，轻点一下书签即可自动捕获数据并跳转导入，无需手动复制大段文本。
           </p>
 
           <button
@@ -297,16 +351,16 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
               首次使用设置说明（仅需配置一次）：
             </div>
             <div>
-              1. 随意将当前网页添加为 Safari 书签，标题命名为「<strong>导入吉大课表</strong>」。
+              1. 随意将当前网页添加为 Safari 书签，标题命名为「<strong>导入吉大助手</strong>」。
             </div>
             <div>
               2. 打开 Safari 书签列表，点击「编辑」，将该书签的网址全部删除，<strong>粘贴刚才复制的脚本</strong>并保存。
             </div>
             <div>
-              3. 在 Safari 中打开并登录教务系统，进入「学生课表」页面。
+              3. 在 Safari 中打开并登录教务系统，进入「学生课表」、「成绩查询」或「考试安排」任一页面。
             </div>
             <div>
-              4. 点击书签中的「<strong>导入吉大课表</strong>」，将立即自动同步并唤醒本应用！
+              4. 点击书签中的「<strong>导入吉大助手</strong>」，将立即自动识别并同步导入相应模块！
             </div>
           </div>
 
@@ -417,7 +471,7 @@ export const ImportPage: React.FC<ImportPageProps> = ({ onImportSuccess }) => {
           <textarea
             value={jsonText}
             onChange={(e) => setJsonText(e.target.value)}
-            placeholder="粘贴 xskcb.do 返回的 JSON 数据，或 Android / 鸿蒙导出的 v1 备份 JSON..."
+            placeholder="粘贴教务系统课表、成绩单 (xscjcx)、考试安排或跨端 v1 备份 JSON，系统将自动识别格式..."
             rows={5}
             style={{
               width: '100%',

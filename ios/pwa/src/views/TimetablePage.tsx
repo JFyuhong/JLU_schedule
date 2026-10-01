@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   CourseMeetingRef,
   CourseSchedule,
+  FontSize,
   SECTION_RANGES,
   WEEKDAY_NAMES,
 } from '../core/types';
@@ -14,12 +15,14 @@ import {
 import { getCourseColor } from '../core/colorPalette';
 import { CourseDetailModal } from '../components/CourseDetailModal';
 import { AddCourseModal } from '../components/AddCourseModal';
-import { ChevronLeft, ChevronRight, Plus, Layers } from 'lucide-react';
+import { TextScheduleModal } from './tools/TextScheduleModal';
+import { ChevronLeft, ChevronRight, Plus, Layers, FileText } from 'lucide-react';
 
 interface TimetablePageProps {
   courses: CourseSchedule[];
   semesterStartDate: string | null;
   showNonCurrent: boolean;
+  fontSize?: FontSize;
   isDark: boolean;
   profileName: string;
   onAddCourse: (course: CourseSchedule) => void;
@@ -34,6 +37,7 @@ export const TimetablePage: React.FC<TimetablePageProps> = ({
   courses,
   semesterStartDate,
   showNonCurrent,
+  fontSize = 'normal',
   isDark,
   profileName,
   onAddCourse,
@@ -52,8 +56,12 @@ export const TimetablePage: React.FC<TimetablePageProps> = ({
   const [selectedWeek, setSelectedWeek] = useState(actualCurrentWeek);
   const [activeMeetingRef, setActiveMeetingRef] = useState<CourseMeetingRef | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isTextExportOpen, setIsTextExportOpen] = useState(false);
   const [editingRef, setEditingRef] = useState<CourseMeetingRef | null>(null);
   const [showWeekPicker, setShowWeekPicker] = useState(false);
+
+  const cardTitleFontSize =
+    fontSize === 'compact' ? '9.5px' : fontSize === 'large' ? '12px' : '10.5px';
 
   // Compute dates for Monday - Sunday of selected week
   // week 1 Monday = startDate
@@ -131,6 +139,24 @@ export const TimetablePage: React.FC<TimetablePageProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
+              onClick={() => setIsTextExportOpen(true)}
+              className="ios-button"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--card-bg)',
+                color: 'var(--text-secondary)',
+                border: '0.5px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="导出文本课表"
+            >
+              <FileText size={16} />
+            </button>
+            <button
               onClick={() => {
                 setEditingRef(null);
                 setIsAddOpen(true);
@@ -157,7 +183,7 @@ export const TimetablePage: React.FC<TimetablePageProps> = ({
         {/* Week Switcher Bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
           <button
-            onClick={() => setSelectedWeek((w) => Math.max(1, w - 1))}
+            onClick={() => setSelectedWeek((w: number) => Math.max(1, w - 1))}
             disabled={selectedWeek <= 1}
             className="ios-button"
             style={{
@@ -192,7 +218,7 @@ export const TimetablePage: React.FC<TimetablePageProps> = ({
           </button>
 
           <button
-            onClick={() => setSelectedWeek((w) => Math.min(maxWeeks, w + 1))}
+            onClick={() => setSelectedWeek((w: number) => Math.min(maxWeeks, w + 1))}
             disabled={selectedWeek >= maxWeeks}
             className="ios-button"
             style={{
@@ -454,7 +480,7 @@ export const TimetablePage: React.FC<TimetablePageProps> = ({
                       <div
                         style={{
                           fontWeight: 600,
-                          fontSize: '11px',
+                          fontSize: cardTitleFontSize,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           display: '-webkit-box',
@@ -467,7 +493,7 @@ export const TimetablePage: React.FC<TimetablePageProps> = ({
                       {meeting.location && (
                         <div
                           style={{
-                            fontSize: '9px',
+                            fontSize: fontSize === 'compact' ? '8px' : '9px',
                             opacity: 0.85,
                             marginTop: '2px',
                             overflow: 'hidden',
@@ -527,6 +553,13 @@ export const TimetablePage: React.FC<TimetablePageProps> = ({
           }
         }}
         editItem={editingRef}
+      />
+
+      {/* Text Timetable Export Modal */}
+      <TextScheduleModal
+        isOpen={isTextExportOpen}
+        onClose={() => setIsTextExportOpen(false)}
+        courses={courses}
       />
     </div>
   );

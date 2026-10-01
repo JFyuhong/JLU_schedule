@@ -4,6 +4,7 @@ import { AppPreferences, CourseSchedule } from './core/types';
 import { TabBar, TabType } from './components/TabBar';
 import { TimetablePage } from './views/TimetablePage';
 import { TodayPage } from './views/TodayPage';
+import { ToolsPage } from './views/ToolsPage';
 import { ImportPage } from './views/ImportPage';
 import { SettingsPage } from './views/SettingsPage';
 import { Layers, X } from 'lucide-react';
@@ -11,7 +12,7 @@ import { Layers, X } from 'lucide-react';
 export const App: React.FC = () => {
   const store = ProfileStore.getInstance();
 
-  const [currentTab, setCurrentTab] = useState<TabType>('timetable');
+  const [currentTab, setCurrentTab] = useState<TabType>(() => store.getPreferences().defaultTab || 'timetable');
   const [preferences, setPreferences] = useState<AppPreferences>(store.getPreferences());
   const [activeProfile, setActiveProfile] = useState(store.getActiveProfile());
   const [isSystemDark, setIsSystemDark] = useState<boolean>(() => {
@@ -81,6 +82,7 @@ export const App: React.FC = () => {
             courses={activeProfile.courses}
             semesterStartDate={activeProfile.meta.semesterStartDate ?? null}
             showNonCurrent={preferences.showNonCurrentWeek}
+            fontSize={preferences.fontSize}
             isDark={isDark}
             profileName={activeProfile.meta.name}
             onAddCourse={handleAddCourse}
@@ -96,6 +98,12 @@ export const App: React.FC = () => {
             semesterStartDate={activeProfile.meta.semesterStartDate ?? null}
             showNonCurrent={preferences.showNonCurrentWeek}
             onDeleteCourse={handleDeleteCourse}
+          />
+        )}
+
+        {currentTab === 'tools' && (
+          <ToolsPage
+            courses={activeProfile.courses}
           />
         )}
 

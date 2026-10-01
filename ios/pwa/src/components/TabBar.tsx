@@ -1,7 +1,7 @@
 import React from 'react';
-import { Calendar, Clock, Download, Settings } from 'lucide-react';
+import { Calendar, Clock, Briefcase, Download, Settings } from 'lucide-react';
 
-export type TabType = 'timetable' | 'today' | 'import' | 'settings';
+export type TabType = 'timetable' | 'today' | 'tools' | 'import' | 'settings';
 
 interface TabBarProps {
   currentTab: TabType;
@@ -12,6 +12,7 @@ export const TabBar: React.FC<TabBarProps> = ({ currentTab, onTabChange }) => {
   const tabs = [
     { key: 'timetable' as TabType, label: '课表', icon: Calendar },
     { key: 'today' as TabType, label: '今日', icon: Clock },
+    { key: 'tools' as TabType, label: '工具', icon: Briefcase },
     { key: 'import' as TabType, label: '导入', icon: Download },
     { key: 'settings' as TabType, label: '设置', icon: Settings },
   ];
@@ -48,7 +49,7 @@ export const TabBar: React.FC<TabBarProps> = ({ currentTab, onTabChange }) => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '25%',
+              width: '20%',
               height: '50px',
               color: isActive ? 'var(--accent-color)' : 'var(--text-secondary)',
               transition: 'color 0.15s ease',

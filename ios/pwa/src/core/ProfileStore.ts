@@ -21,6 +21,8 @@ const DEFAULT_PREFERENCES: AppPreferences = {
   darkMode: 'system',
   showNonCurrentWeek: true,
   totalWeeks: 20,
+  fontSize: 'normal',
+  defaultTab: 'timetable',
 };
 
 export class ProfileStore {

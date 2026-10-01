@@ -96,12 +96,16 @@ export interface StoredMeta {
 
 export type ThemeType = 'warm' | 'blue' | 'mint';
 export type DarkModeType = 'system' | 'light' | 'dark';
+export type FontSize = 'compact' | 'normal' | 'large';
+export type DefaultTab = 'timetable' | 'today';
 
 export interface AppPreferences {
   theme: ThemeType;
   darkMode: DarkModeType;
   showNonCurrentWeek: boolean;
   totalWeeks: number;
+  fontSize: FontSize;
+  defaultTab: DefaultTab;
 }
 
 export const SECTION_RANGES: string[] = [

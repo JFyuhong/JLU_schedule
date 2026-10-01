@@ -4,11 +4,14 @@ import {
   AppPreferences,
   CourseSchedule,
   DarkModeType,
+  DefaultTab,
+  FontSize,
   ProfileInfo,
   ThemeType,
 } from '../core/types';
 import { SimpleDate } from '../core/SimpleDate';
 import { inferFromCourses, normalizeToWeekStart } from '../core/SemesterStartDatePolicy';
+import { TextScheduleModal } from './tools/TextScheduleModal';
 import {
   Layers,
   Calendar,
@@ -23,6 +26,7 @@ import {
   Edit2,
   Check,
   Share2,
+  FileText,
 } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -47,6 +51,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [editingName, setEditingName] = useState('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
+  const [isTextExportOpen, setIsTextExportOpen] = useState(false);
 
   const currentStartDate = activeProfile.semesterStartDate || SimpleDate.today().previousOrSameMonday().isoString();
 
@@ -510,6 +515,79 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
           </div>
 
+          {/* Font Size */}
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              课表字号
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              {[
+                { key: 'compact' as FontSize, label: '紧凑 (小)' },
+                { key: 'normal' as FontSize, label: '标准' },
+                { key: 'large' as FontSize, label: '清晰 (大)' },
+              ].map((f) => {
+                const isSelected = preferences.fontSize === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => onUpdatePreferences({ fontSize: f.key })}
+                    className="ios-button"
+                    style={{
+                      height: '40px',
+                      borderRadius: '10px',
+                      border: isSelected ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                      backgroundColor: isSelected ? 'var(--accent-light)' : 'var(--bg-color)',
+                      color: isSelected ? 'var(--accent-color)' : 'var(--text-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '13px',
+                      fontWeight: isSelected ? 600 : 400,
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Default Start Tab */}
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              默认启动页面
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+              {[
+                { key: 'timetable' as DefaultTab, label: '完整课表' },
+                { key: 'today' as DefaultTab, label: '今日课程' },
+              ].map((tab) => {
+                const isSelected = preferences.defaultTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => onUpdatePreferences({ defaultTab: tab.key })}
+                    className="ios-button"
+                    style={{
+                      height: '40px',
+                      borderRadius: '10px',
+                      border: isSelected ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                      backgroundColor: isSelected ? 'var(--accent-light)' : 'var(--bg-color)',
+                      color: isSelected ? 'var(--accent-color)' : 'var(--text-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '13px',
+                      fontWeight: isSelected ? 600 : 400,
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Show non-current toggle */}
           <div
             style={{
@@ -539,6 +617,45 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               }}
             />
           </div>
+        </div>
+
+        {/* Section: Text Schedule Export */}
+        <div
+          style={{
+            backgroundColor: 'var(--card-bg)',
+            border: '0.5px solid var(--border-color)',
+            borderRadius: '16px',
+            padding: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileText size={18} color="var(--accent-color)" />
+            <div>
+              <h3 style={{ fontSize: '15px', fontWeight: 600 }}>课表纯文本导出</h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                一键生成纯文本课表，便于分享至微信或便签备忘录
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsTextExportOpen(true)}
+            className="ios-button"
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '0.5px solid var(--border-color)',
+              backgroundColor: 'var(--bg-color)',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            导出文本
+          </button>
         </div>
 
         {/* Section 4: Backup & Cross-platform Interoperability */}
@@ -640,6 +757,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           JLU_schedule v2.2.2 PWA · 吉林大学课表应用 · 开源无广告
         </div>
       </div>
+
+      <TextScheduleModal
+        courses={courses}
+        isOpen={isTextExportOpen}
+        onClose={() => setIsTextExportOpen(false)}
+      />
     </div>
   );
 };
+
