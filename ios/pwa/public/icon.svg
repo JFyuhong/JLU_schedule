@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7B54" />
+      <stop offset="100%" stop-color="#E84A27" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F7F7FA" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.18" />
+    </filter>
+  </defs>
+  <!-- Background with iOS squircle shape -->
+  <rect width="512" height="512" rx="115" fill="url(#bg)" />
+
+  <!-- Calendar card -->
+  <g filter="url(#shadow)">
+    <rect x="96" y="112" width="320" height="288" rx="36" fill="url(#cardGrad)" />
+  </g>
+
+  <!-- Calendar header band -->
+  <path d="M 96 148 C 96 128, 112 112, 132 112 L 380 112 C 400 112, 416 128, 416 148 L 416 186 L 96 186 Z" fill="#E84A27" />
+
+  <!-- Calendar header pins -->
+  <circle cx="176" cy="112" r="14" fill="#FFFFFF" opacity="0.9" />
+  <circle cx="336" cy="112" r="14" fill="#FFFFFF" opacity="0.9" />
+
+  <!-- Grid cells simulating timetable -->
+  <rect x="136" y="216" width="68" height="42" rx="10" fill="#FFE5D9" />
+  <rect x="222" y="216" width="68" height="66" rx="10" fill="#E8F4FD" />
+  <rect x="308" y="216" width="68" height="42" rx="10" fill="#E8F8F0" />
+
+  <rect x="136" y="274" width="68" height="66" rx="10" fill="#FEF0D6" />
+  <rect x="222" y="298" width="68" height="42" rx="10" fill="#F0E8FA" />
+  <rect x="308" y="274" width="68" height="66" rx="10" fill="#FFE5D9" />
+
+  <!-- Text "JLU" subtle in bottom banner or header -->
+  <text x="256" y="162" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif" font-size="28" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">JLU SCHEDULE</text>
+</svg>

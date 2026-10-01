@@ -1,0 +1,19 @@
+{
+  "name": "吉大课表",
+  "short_name": "吉大课表",
+  "description": "吉林大学课表应用 - 开源、无广告、为 iOS 打造的原生质感 PWA",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#FA5A3A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
