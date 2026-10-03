@@ -26,7 +26,6 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import cn.jlu.schedule.R
@@ -57,7 +56,7 @@ import javax.net.ssl.HttpsURLConnection
 /**
  * 成绩查询界面：按学期汇总课程成绩、单科绩点、加权均分，支持教务一键同步、手动录入与绩点计算器双向打通。
  */
-class GradeInquiryActivity : AppCompatActivity() {
+class GradeInquiryActivity : AccountScopedActivity() {
 
     private lateinit var palette: ThemePalette
     private lateinit var progressBar: ProgressBar
@@ -151,7 +150,7 @@ class GradeInquiryActivity : AppCompatActivity() {
 
     private fun loadLocalData() {
         allGrades.clear()
-        allGrades.addAll(GradeStore.load(filesDir))
+        allGrades.addAll(withAccountData { GradeStore.load(it) }.orEmpty())
         renderGrades()
     }
 
@@ -369,8 +368,8 @@ class GradeInquiryActivity : AppCompatActivity() {
             .setMessage(getString(R.string.grade_delete_message, grade.name))
             .setPositiveButton(R.string.manage_delete) { _, _ ->
                 allGrades.removeAll { it == grade || (it.name == grade.name && it.courseCode == grade.courseCode && it.semesterCode == grade.semesterCode) }
-                GradeStore.save(filesDir, allGrades)
-                GradeStore.syncToGpaCourses(filesDir, allGrades)
+                withAccountData { GradeStore.save(it, allGrades) }
+                withAccountData { GradeStore.syncToGpaCourses(it, allGrades) }
                 renderGrades()
                 UiFeedback.showMessage(listContainer, getString(R.string.manage_deleted), palette)
             }
@@ -445,8 +444,8 @@ class GradeInquiryActivity : AppCompatActivity() {
                     allGrades.add(0, newGrade)
                 }
 
-                GradeStore.save(filesDir, allGrades)
-                GradeStore.syncToGpaCourses(filesDir, allGrades)
+                withAccountData { GradeStore.save(it, allGrades) }
+                withAccountData { GradeStore.syncToGpaCourses(it, allGrades) }
                 renderGrades()
                 UiFeedback.showMessage(listContainer, if (existing != null) "已修改成绩" else "已添加成绩", palette)
             }
@@ -461,7 +460,7 @@ class GradeInquiryActivity : AppCompatActivity() {
     }
 
     private fun syncFromGpaCalculator() {
-        val gpaCourses = GpaCourseStore.load(filesDir)
+        val gpaCourses = withAccountData { GpaCourseStore.load(it) }.orEmpty()
         if (gpaCourses.isEmpty()) {
             UiFeedback.showMessage(listContainer, "绩点计算器中暂无课程数据", palette)
             return
@@ -474,7 +473,7 @@ class GradeInquiryActivity : AppCompatActivity() {
 
         allGrades.clear()
         allGrades.addAll(converted)
-        GradeStore.save(filesDir, allGrades)
+        withAccountData { GradeStore.save(it, allGrades) }
         renderGrades()
         UiFeedback.showMessage(
             listContainer,
@@ -485,12 +484,13 @@ class GradeInquiryActivity : AppCompatActivity() {
 
     private fun exportToGpaCalculator() {
         if (allGrades.isNotEmpty()) {
-            GradeStore.syncToGpaCourses(filesDir, allGrades)
+            withAccountData { GradeStore.syncToGpaCourses(it, allGrades) }
         }
         startActivity(Intent(this, GpaCalculatorActivity::class.java))
     }
 
     private fun startSyncGrades() {
+        if (!accountData.isCurrent) return
         if (!JwApiClient.canRestoreSession(this)) {
             promptNeedLogin()
             return
@@ -529,8 +529,8 @@ class GradeInquiryActivity : AppCompatActivity() {
         val merged = GradeStore.mergeSyncedGrades(allGrades, parsed)
         allGrades.clear()
         allGrades.addAll(merged)
-        GradeStore.save(filesDir, allGrades)
-        GradeStore.syncToGpaCourses(filesDir, allGrades)
+        withAccountData { GradeStore.save(it, allGrades) }
+        withAccountData { GradeStore.syncToGpaCourses(it, allGrades) }
         renderGrades()
         UiFeedback.showMessage(
             listContainer,
@@ -570,7 +570,7 @@ class GradeInquiryActivity : AppCompatActivity() {
             val rounds = intArrayOf(1, 2, 4, 7, 12, 18)
             for (i in rounds.indices) {
                 if (i > 0) delay((rounds[i] - rounds[i - 1]) * 1000L) else delay(rounds[i] * 1000L)
-                if (fetchFinished.get()) return@launch
+                if (!accountData.isCurrent || fetchFinished.get()) return@launch
                 val round = i + 1
                 val js = """
                 (function(){
@@ -690,7 +690,7 @@ class GradeInquiryActivity : AppCompatActivity() {
     }
 
     private fun finishFetch(reason: String) {
-        if (!fetchFinished.compareAndSet(false, true)) return
+        if (!accountData.isCurrent || !fetchFinished.compareAndSet(false, true)) return
         fetchWatchdogJob?.cancel()
         fetchQuietJob?.cancel()
         autoQueryJob?.cancel()
@@ -736,7 +736,7 @@ class GradeInquiryActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_LOGIN && resultCode == RESULT_OK) {
+        if (accountData.isCurrent && requestCode == REQ_LOGIN && resultCode == RESULT_OK) {
             startSyncGrades()
         }
     }
@@ -756,7 +756,7 @@ class GradeInquiryActivity : AppCompatActivity() {
         syncWebView.addJavascriptInterface(GradeBridge(), "GpaGradeBridge")
         syncWebView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                if (fetchFinished.get() || !request.isForMainFrame) return null
+                if (!accountData.isCurrent || fetchFinished.get() || !request.isForMainFrame) return null
                 val url = request.url
                 if (url.host != TpassConfig.IEDU_HOST || request.method != "GET") return null
                 if (url.encodedPath?.endsWith(".do") != true) return null
@@ -768,7 +768,7 @@ class GradeInquiryActivity : AppCompatActivity() {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                if (fetchFinished.get()) return
+                if (!accountData.isCurrent || fetchFinished.get()) return
                 if (fetchServedLoginHtml.compareAndSet(true, false)) {
                     handleFetchLogin()
                     return
@@ -795,20 +795,22 @@ class GradeInquiryActivity : AppCompatActivity() {
         val mimeType = connection.contentType?.substringBefore(';')?.trim() ?: "text/html"
         val body = connection.inputStream.use { it.readBytes() }
 
-        val setCookies = connection.headerFields["Set-Cookie"] ?: emptyList()
-        if (setCookies.isNotEmpty()) {
-            val cookieManager = CookieManager.getInstance()
-            val host = target.host.orEmpty()
-            for (cookieHeader in setCookies) {
-                cookieManager.setCookie(target.toString(), cookieHeader)
-                if (host.isNotBlank()) {
-                    cookieManager.setCookie("https://$host/", cookieHeader)
-                    cookieManager.setCookie("https://$host/jwapp/", cookieHeader)
-                    cookieManager.setCookie("https://$host/jwapp/sys/cjcx/", cookieHeader)
+        withAccountData {
+            val setCookies = connection.headerFields["Set-Cookie"] ?: emptyList()
+            if (setCookies.isNotEmpty()) {
+                val cookieManager = CookieManager.getInstance()
+                val host = target.host.orEmpty()
+                for (cookieHeader in setCookies) {
+                    cookieManager.setCookie(target.toString(), cookieHeader)
+                    if (host.isNotBlank()) {
+                        cookieManager.setCookie("https://$host/", cookieHeader)
+                        cookieManager.setCookie("https://$host/jwapp/", cookieHeader)
+                        cookieManager.setCookie("https://$host/jwapp/sys/cjcx/", cookieHeader)
+                    }
                 }
+                cookieManager.flush()
+                JwApiClient.importAllWebViewCookies(this@GradeInquiryActivity)
             }
-            cookieManager.flush()
-            JwApiClient.importAllWebViewCookies(this@GradeInquiryActivity)
         }
 
         if (!mimeType.contains("html", ignoreCase = true)) {

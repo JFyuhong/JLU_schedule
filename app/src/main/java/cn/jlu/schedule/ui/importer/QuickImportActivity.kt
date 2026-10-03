@@ -20,25 +20,25 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import cn.jlu.schedule.R
-import cn.jlu.schedule.auth.CampusCookieJar
 import cn.jlu.schedule.auth.TpassConfig
 import cn.jlu.schedule.data.ImportedScheduleStorage
-import cn.jlu.schedule.data.ScheduleRepository
 import cn.jlu.schedule.parser.ScheduleImportCacheParser
+import cn.jlu.schedule.remote.QuickImportSession
 import cn.jlu.schedule.remote.AutoImportCoordinator
 import cn.jlu.schedule.remote.JwApiClient
 import cn.jlu.schedule.remote.ScheduleRemoteSource
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import cn.jlu.schedule.ui.auth.LoginActivity
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.UUID
 
 /**
  * 一键导入（WebView 驱动）：复用内置浏览器里已登录的 Cookie，在隐藏 WebView 中打开
@@ -56,20 +56,41 @@ class QuickImportActivity : AppCompatActivity() {
     private lateinit var actionLogin: Button
     private lateinit var closeButton: Button
 
-    private val capturedKeys = java.util.Collections.synchronizedSet(HashSet<String>())
-    private val capturedFiles = java.util.Collections.synchronizedList(ArrayList<Pair<String, File>>())
-    private val sessionDir by lazy { File(filesDir, "import_web_cache/quick_${System.currentTimeMillis()}") }
-    private val handled = AtomicBoolean(false)
-    private val importStarted = AtomicBoolean(false)
-    private var silentLoginTried = false
-    private var fallbackPageLoaded = false
+    private inner class Attempt {
+        val job = SupervisorJob(lifecycleScope.coroutineContext[Job])
+        val scope = CoroutineScope(lifecycleScope.coroutineContext + job)
+        val directory = File(filesDir, "import_web_cache/quick_${UUID.randomUUID()}")
+        var silentLoginTried = false
+        var fallbackPageLoaded = false
+        @Volatile var casLoginHtmlServed = false
+        var fallbackFetchDone = false
+        var captureCount = 0
+        val session = QuickImportSession<ScheduleImportCacheParser.CacheEntry, AutoImportCoordinator.Phase>(
+            scope = scope,
+            import = { entries -> AutoImportCoordinator.importCaptured(this@QuickImportActivity, entries, mode, newProfileName) },
+            onResult = { result ->
+                if (attempt === this) showImportResult(result.getOrElse {
+                    AutoImportCoordinator.Phase.Failed(it.message ?: "导入失败")
+                })
+            },
+            onTimeout = {
+                if (attempt === this) {
+                    job.cancel()
+                    progress.visibility = View.GONE
+                    showMessage("获取课表超时，请确认已登录且网络可用后重试")
+                }
+            }
+        )
 
-    /** 会话过期时教务域不改 URL 直接返回 CAS 登录页 HTML，需在内容层识别后触发静默重登 */
-    @Volatile
-    private var casLoginHtmlServed = false
-    private var fallbackFetchDone = false
-    private var indexCounter = 0
-    private var importJob: kotlinx.coroutines.Job? = null
+        init {
+            // Wait for cancelled IO work to finish before removing its input files.
+            job.invokeOnCompletion { directory.deleteRecursively() }
+        }
+
+        val collecting get() = job.isActive && session.isCollecting
+    }
+
+    private lateinit var attempt: Attempt
 
     private val mode by lazy {
         if (intent.getBooleanExtra(EXTRA_CREATE_NEW, false)) {
@@ -105,29 +126,44 @@ class QuickImportActivity : AppCompatActivity() {
         }
 
         webView = findViewById(R.id.quickWebView)
-        setupWebView()
+        startAttempt()
+    }
 
-        // 预先把已有 Cookie 同步进 WebView
+    private fun startAttempt() {
+        if (::attempt.isInitialized) {
+            attempt.job.cancel()
+            val parent = webView.parent as android.view.ViewGroup
+            val index = parent.indexOfChild(webView)
+            val params = webView.layoutParams
+            parent.removeView(webView)
+            webView.stopLoading()
+            webView.destroy()
+            // Old documents/bridges must never deliver responses to the new attempt.
+            webView = WebView(this).apply { visibility = View.INVISIBLE }
+            parent.addView(webView, index, params)
+        }
+        attempt = Attempt()
+        setupWebView(attempt)
+        progress.visibility = View.VISIBLE
+        actionLogin.visibility = View.GONE
+        actionLogin.isEnabled = true
+        showMessage(getString(R.string.import_quick_progress_fetch))
         JwApiClient.importAllWebViewCookies(this)
         JwApiClient.syncJarToWebView(this)
-
-        scheduleTimeoutWatchdog()
-
-        // 优先尝试原生极速拉取；若已有可用会话直接秒级入库
-        tryNativeDirectFetch()
-
+        attempt.session.start()
+        tryNativeDirectFetch(attempt)
         webView.loadUrl(SCHEDULE_API_URL)
     }
 
-    private fun tryNativeDirectFetch() {
-        lifecycleScope.launch(Dispatchers.IO) {
+    private fun tryNativeDirectFetch(attempt: Attempt) {
+        attempt.scope.launch(Dispatchers.IO) {
             val res = ScheduleRemoteSource.fetchScheduleNative(this@QuickImportActivity)
             res.onSuccess { fetches ->
-                if (handled.get() || fetches.isEmpty()) return@onSuccess
+                if (!attempt.collecting || fetches.isEmpty()) return@onSuccess
                 Log.i(TAG, "direct native schedule fetch ok: ${fetches.size} payloads")
                 withContext(Dispatchers.Main) {
                     fetches.forEach { fetch ->
-                        onPayloadCaptured(fetch.finalUrl, fetch.json)
+                        onPayloadCaptured(attempt, fetch.finalUrl, fetch.json)
                     }
                 }
             }.onFailure {
@@ -137,7 +173,7 @@ class QuickImportActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun setupWebView() {
+    private fun setupWebView(attempt: Attempt) {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -151,7 +187,7 @@ class QuickImportActivity : AppCompatActivity() {
             setAcceptCookie(true)
             setAcceptThirdPartyCookies(webView, true)
         }
-        webView.addJavascriptInterface(Bridge(), "QuickImportBridge")
+        webView.addJavascriptInterface(Bridge(attempt), "QuickImportBridge")
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(
                 view: WebView,
@@ -159,11 +195,11 @@ class QuickImportActivity : AppCompatActivity() {
             ): WebResourceResponse? {
                 // 主文档拦截：下载 HTML 并把捕获钩子插到 <head> 后，
                 // 保证页面任何脚本执行前 XHR/fetch 已被包住（消除注入时序竞态）
-                if (handled.get() || !request.isForMainFrame) return null
+                if (!attempt.collecting || !request.isForMainFrame) return null
                 val url = request.url
                 if (url.host != TpassConfig.IEDU_HOST || request.method != "GET") return null
                 if (url.encodedPath?.endsWith(".do") != true) return null
-                return runCatching { buildHookedDocumentResponse(url) }
+                return runCatching { buildHookedDocumentResponse(attempt, url) }
                     .onFailure { Log.w(TAG, "intercept failed: ${it.message}") }
                     .getOrNull()
             }
@@ -181,58 +217,59 @@ class QuickImportActivity : AppCompatActivity() {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                if (handled.get()) return
+                if (!attempt.collecting) return
                 val host = runCatching { android.net.Uri.parse(url).host ?: "" }.getOrDefault("")
                 injectCaptureHook(view)
-                if (casLoginHtmlServed) {
-                    casLoginHtmlServed = false
-                    onCasLoginPage(url)
+                if (attempt.casLoginHtmlServed) {
+                    attempt.casLoginHtmlServed = false
+                    onCasLoginPage(attempt)
                     return
                 }
                 when {
-                    host == TpassConfig.CAS_HOST -> onCasLoginPage(url)
-                    url.startsWith(SCHEDULE_API_URL) -> onApiPageFinished(view, url)
-                    host == TpassConfig.IEDU_HOST && fallbackPageLoaded -> scheduleFallbackFetch(view)
+                    host == TpassConfig.CAS_HOST -> onCasLoginPage(attempt)
+                    url.startsWith(SCHEDULE_API_URL) -> onApiPageFinished(attempt, view, url)
+                    host == TpassConfig.IEDU_HOST && attempt.fallbackPageLoaded -> scheduleFallbackFetch(attempt, view)
                 }
             }
         }
     }
 
     /** 第一跳：直接 GET 课表接口。返回 JSON 则完事，返回 HTML 则转应用页路由 */
-    private fun onApiPageFinished(view: WebView, url: String) {
-        if (fallbackPageLoaded) {
+    private fun onApiPageFinished(attempt: Attempt, view: WebView, url: String) {
+        if (attempt.fallbackPageLoaded) {
             injectCaptureHook(view)
             return
         }
         view.evaluateJavascript("(function(){return document.body?document.body.innerText:''})()") { raw ->
             val text = runCatching { org.json.JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
-            if (handled.get()) return@evaluateJavascript
+            if (!attempt.collecting) return@evaluateJavascript
             if (ScheduleImportCacheParser.looksLikeSchedulePayload(url, text, text.length.toLong())) {
-                onPayloadCaptured(url, text)
+                onPayloadCaptured(attempt, url, text)
             } else {
-                fallbackPageLoaded = true
+                attempt.fallbackPageLoaded = true
                 showMessage(getString(R.string.import_quick_progress_fetch))
-                webView.post { webView.loadUrl(WDKB_APP_URL) }
+                view.post { if (attempt.collecting) view.loadUrl(WDKB_APP_URL) }
             }
         }
     }
 
     /** 登录页：先试原生静默重登（凭据已存时），回写 Cookie 后重试；否则引导手动登录 */
-    private fun onCasLoginPage(url: String) {
-        if (silentLoginTried) {
-            if (!handled.get()) needManualLogin()
+    private fun onCasLoginPage(attempt: Attempt) {
+        if (attempt.silentLoginTried) {
+            if (attempt.collecting) needManualLogin(attempt)
             return
         }
-        silentLoginTried = true
+        attempt.silentLoginTried = true
         showMessage(getString(R.string.import_quick_progress_relogin))
-        lifecycleScope.launch {
+        attempt.scope.launch {
             val result = JwApiClient.silentLogin(this@QuickImportActivity)
+            if (!attempt.collecting) return@launch
             if (result is cn.jlu.schedule.auth.CasLoginResult.Success) {
                 JwApiClient.syncJarToWebView(this@QuickImportActivity)
-                tryNativeDirectFetch()
-                if (!handled.get()) webView.loadUrl(SCHEDULE_API_URL)
+                tryNativeDirectFetch(attempt)
+                if (attempt.collecting) webView.loadUrl(SCHEDULE_API_URL)
             } else {
-                needManualLogin()
+                needManualLogin(attempt)
             }
         }
     }
@@ -245,7 +282,7 @@ class QuickImportActivity : AppCompatActivity() {
      * 下载主文档 HTML 并注入捕获钩子后返回给 WebView。
      * 复用 CookieManager 中的登录会话；JSON/非 HTML 响应原样透传。
      */
-    private fun buildHookedDocumentResponse(target: android.net.Uri): WebResourceResponse {
+    private fun buildHookedDocumentResponse(attempt: Attempt, target: android.net.Uri): WebResourceResponse {
         val connection = java.net.URL(target.toString()).openConnection() as javax.net.ssl.HttpsURLConnection
         connection.connectTimeout = 15000
         connection.readTimeout = 20000
@@ -265,6 +302,8 @@ class QuickImportActivity : AppCompatActivity() {
             ?.mapValues { entry -> entry.value.joinToString(", ") }
         Log.i(TAG, "intercepted main doc $target -> $responseCode $mimeType len=${body.size}")
 
+        if (!attempt.collecting) return WebResourceResponse(mimeType, "UTF-8", body.inputStream())
+
         // 把可能附带的 Set-Cookie 回写到 CookieManager
         connection.headerFields?.get("Set-Cookie")?.forEach { cookieVal ->
             CookieManager.getInstance().setCookie(target.toString(), cookieVal)
@@ -273,7 +312,7 @@ class QuickImportActivity : AppCompatActivity() {
         val text = String(body, Charsets.UTF_8)
         if (ScheduleImportCacheParser.looksLikeSchedulePayload(target.toString(), text, text.length.toLong())) {
             Log.i(TAG, "schedule payload directly intercepted from doc: ${text.length} bytes")
-            runOnUiThread { onPayloadCaptured(target.toString(), text) }
+            runOnUiThread { onPayloadCaptured(attempt, target.toString(), text) }
         }
 
         if (!mimeType.contains("html", ignoreCase = true)) {
@@ -284,7 +323,7 @@ class QuickImportActivity : AppCompatActivity() {
         var html = text
         if (html.contains("id=\"loginForm\"") || html.contains("id=\"lt\"")) {
             Log.i(TAG, "served doc is CAS login page ($target), will trigger silent relogin")
-            casLoginHtmlServed = true
+            attempt.casLoginHtmlServed = true
             return WebResourceResponse(mimeType, "UTF-8", html.byteInputStream()).apply {
                 responseHeaders = headers
             }
@@ -307,17 +346,17 @@ class QuickImportActivity : AppCompatActivity() {
      * 页面自身请求已错过（注入前完成）或页面未自动请求时的兜底：
      * 直接在页面上下文里 fetch 课表接口（先 POST 后 GET），响应仍走钩子回传。
      */
-    private fun scheduleFallbackFetch(view: WebView) {
-        if (fallbackFetchDone || handled.get() || capturedFiles.isNotEmpty()) return
-        fallbackFetchDone = true
+    private fun scheduleFallbackFetch(attempt: Attempt, view: WebView) {
+        if (attempt.fallbackFetchDone || !attempt.collecting || attempt.captureCount > 0) return
+        attempt.fallbackFetchDone = true
         view.postDelayed({
-            if (handled.get() || capturedFiles.isNotEmpty()) return@postDelayed
+            if (!attempt.collecting || attempt.captureCount > 0) return@postDelayed
             Log.i(TAG, "page requests missed, fetching schedule API directly")
             view.evaluateJavascript(FALLBACK_FETCH_JS, null)
         }, 2500)
     }
 
-    private inner class Bridge {
+    private inner class Bridge(private val attempt: Attempt) {
         @JavascriptInterface
         fun onDebug(text: String?) {
             Log.d(TAG, "hook: ${text.orEmpty().take(300)}")
@@ -327,56 +366,32 @@ class QuickImportActivity : AppCompatActivity() {
         fun onNetworkResponse(url: String?, content: String?) {
             val safeUrl = url.orEmpty().trim()
             val text = content.orEmpty()
-            if (safeUrl.isBlank() || handled.get()) return
+            if (safeUrl.isBlank() || !attempt.collecting) return
             if (text.length < MIN_PAYLOAD_BYTES) return
             if (!ScheduleImportCacheParser.looksLikeSchedulePayload(safeUrl, text, text.length.toLong())) return
-            onPayloadCaptured(safeUrl, text)
+            runOnUiThread { onPayloadCaptured(attempt, safeUrl, text) }
         }
     }
 
-    /** 抓到课表 JSON：落盘去重，滚动静默期后统一解析入库 */
-    private fun onPayloadCaptured(url: String, text: String) {
-        val key = captureKey(url, text)
-        synchronized(capturedKeys) {
-            if (!capturedKeys.add(key)) return
-        }
-        synchronized(capturedFiles) {
-            sessionDir.mkdirs()
-            indexCounter += 1
-            val file = File(sessionDir, "%04d_quick.json".format(indexCounter))
-            file.writeText(text, Charsets.UTF_8)
-            capturedFiles.add(url to file)
-        }
-        Log.i(TAG, "captured schedule payload #${indexCounter} (${text.length} bytes)")
-        showMessage(getString(R.string.import_quick_progress_import))
-        // 滚动静默期：页面可能分多次查询不同视图（周视图/整学期），每收到新捕获就重置计时
-        // 捕获到 2+ 个载荷时缩短静默至 1.2 秒以迅速收口入库，避免用户面对转圈等待
-        importJob?.cancel()
-        importJob = lifecycleScope.launch {
-            val quietMs = if (capturedFiles.size >= 2) 1200L else CAPTURE_QUIET_MS
-            delay(quietMs)
-            if (handled.get()) return@launch
-            importAll()
-        }
-    }
-
-    private suspend fun importAll() {
-        // 防止静默期任务与超时看门狗并发执行同一导入
-        if (!importStarted.compareAndSet(false, true)) return
-        val entries = synchronized(capturedFiles) {
-            capturedFiles.mapIndexed { index, (url, file) ->
-                ScheduleImportCacheParser.CacheEntry(
-                    url = url,
-                    fileName = file.name,
-                    filePath = file.absolutePath,
-                    size = file.length().toInt(),
-                    sequence = index + 1
-                )
+    /** Captures and state transitions are serialized on the main thread. */
+    private fun onPayloadCaptured(attempt: Attempt, url: String, text: String) {
+        if (this.attempt !== attempt || !attempt.collecting) return
+        try {
+            attempt.session.capture(captureKey(url, text)) {
+                attempt.directory.mkdirs()
+                val sequence = ++attempt.captureCount
+                val file = File(attempt.directory, "%04d_quick.json".format(sequence))
+                file.writeText(text, Charsets.UTF_8)
+                showMessage(getString(R.string.import_quick_progress_import))
+                ScheduleImportCacheParser.CacheEntry(url, file.name, file.absolutePath, file.length().toInt(), sequence)
             }
+        } catch (error: Exception) {
+            attempt.session.stopCollecting()
+            showImportResult(AutoImportCoordinator.Phase.Failed(error.message ?: "保存课表响应失败"))
         }
-        val phase = AutoImportCoordinator.importCaptured(this, entries, mode, newProfileName)
-        if (handled.get()) return
-        handled.set(true)
+    }
+
+    private fun showImportResult(phase: AutoImportCoordinator.Phase) {
         progress.visibility = View.GONE
         when (phase) {
             is AutoImportCoordinator.Phase.Done -> {
@@ -387,34 +402,17 @@ class QuickImportActivity : AppCompatActivity() {
                 setResult(RESULT_OK)
                 webView.postDelayed({ finish() }, 1200)
             }
-            else -> {
-                showMessage(phase.errorMessage())
-            }
+            else -> showMessage(phase.errorMessage())
         }
     }
 
-    private fun needManualLogin() {
-        if (handled.get()) return
-        handled.set(true)
+    private fun needManualLogin(attempt: Attempt) {
+        if (this.attempt !== attempt || !attempt.session.stopCollecting()) return
+        attempt.job.cancel()
         progress.visibility = View.GONE
         showMessage("登录已过期，请先登录校园账号")
         actionLogin.isEnabled = true
         actionLogin.visibility = View.VISIBLE
-    }
-
-    private fun scheduleTimeoutWatchdog() {
-        lifecycleScope.launch {
-            delay(TIMEOUT_MS)
-            if (handled.get()) return@launch
-            if (capturedFiles.isNotEmpty()) {
-                // 已有捕获但静默期未结束（页面持续查询）：直接收口导入
-                importAll()
-            } else {
-                handled.set(true)
-                progress.visibility = View.GONE
-                showMessage("获取课表超时，请确认已登录且网络可用后重试")
-            }
-        }
     }
 
     private fun showMessage(text: String) {
@@ -423,25 +421,17 @@ class QuickImportActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_LOGIN && resultCode == RESULT_OK) {
-            silentLoginTried = false
-            handled.set(false)
-            importStarted.set(false)
-            progress.visibility = View.VISIBLE
-            actionLogin.visibility = View.GONE
-            JwApiClient.importAllWebViewCookies(this)
-            JwApiClient.syncJarToWebView(this)
-            tryNativeDirectFetch()
-            webView.loadUrl(SCHEDULE_API_URL)
+        if (requestCode == REQ_LOGIN) {
+            actionLogin.isEnabled = true
+            if (resultCode == RESULT_OK) startAttempt()
         }
     }
 
     override fun onDestroy() {
-        webView.apply {
-            loadUrl("about:blank")
-            onPause()
-        }
-        sessionDir.deleteRecursively()
+        if (::attempt.isInitialized) attempt.job.cancel()
+        webView.stopLoading()
+        (webView.parent as? android.view.ViewGroup)?.removeView(webView)
+        webView.destroy()
         super.onDestroy()
     }
 
@@ -453,10 +443,7 @@ class QuickImportActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "QuickImport"
         private const val MIN_PAYLOAD_BYTES = 80
-        private const val TIMEOUT_MS = 30_000L
 
-        /** 最后一次捕获后的静默等待，页面查完不同视图（周/学期）再统一解析 */
-        private const val CAPTURE_QUIET_MS = 5_000L
         private const val REQ_LOGIN = 4001
 
         /** 我的课表应用页（金智 eMAP 标准路由），页面自身会请求课表接口 */
