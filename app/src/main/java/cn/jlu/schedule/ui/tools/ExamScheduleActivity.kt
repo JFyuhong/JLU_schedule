@@ -26,7 +26,6 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import cn.jlu.schedule.R
@@ -55,7 +54,7 @@ import kotlinx.coroutines.launch
 /**
  * 考试查询界面：期末/期中考试日程、地点、座位号及倒计时，支持从教务同步与手动自定义添加。
  */
-class ExamScheduleActivity : AppCompatActivity() {
+class ExamScheduleActivity : AccountScopedActivity() {
 
     private lateinit var palette: ThemePalette
     private lateinit var progressBar: ProgressBar
@@ -129,7 +128,7 @@ class ExamScheduleActivity : AppCompatActivity() {
 
     private fun loadLocalData() {
         allExams.clear()
-        allExams.addAll(ExamStore.load(filesDir))
+        allExams.addAll(withAccountData { ExamStore.load(it) }.orEmpty())
         renderExams()
     }
 
@@ -266,7 +265,7 @@ class ExamScheduleActivity : AppCompatActivity() {
             .setMessage("确定从考程列表中移除「${exam.courseName}」吗？")
             .setPositiveButton("删除") { _, _ ->
                 allExams.removeAll { it.id == exam.id }
-                ExamStore.save(filesDir, allExams)
+                withAccountData { ExamStore.save(it, allExams) }
                 renderExams()
             }
             .setNegativeButton("取消", null)
@@ -320,7 +319,7 @@ class ExamScheduleActivity : AppCompatActivity() {
                     isCustom = true
                 )
                 allExams.add(item)
-                ExamStore.save(filesDir, allExams)
+                withAccountData { ExamStore.save(it, allExams) }
                 renderExams()
             }
             .setNegativeButton("取消", null)
@@ -332,6 +331,7 @@ class ExamScheduleActivity : AppCompatActivity() {
     }
 
     private fun startSyncExams() {
+        if (!accountData.isCurrent) return
         if (!JwApiClient.canRestoreSession(this)) {
             promptNeedLogin()
             return
@@ -369,7 +369,7 @@ class ExamScheduleActivity : AppCompatActivity() {
     }
 
     private fun onFetchQuietPeriodReached() {
-        if (!fetchFinished.compareAndSet(false, true)) return
+        if (!accountData.isCurrent || !fetchFinished.compareAndSet(false, true)) return
         val snapshot = synchronized(capturedBuffer) { capturedBuffer.toList() }
         val parsed = snapshot.flatMap { ExamScheduleParser.parse(it) }
 
@@ -384,7 +384,7 @@ class ExamScheduleActivity : AppCompatActivity() {
                 allExams.clear()
                 allExams.addAll(parsed)
                 allExams.addAll(customs)
-                ExamStore.save(filesDir, allExams)
+                withAccountData { ExamStore.save(it, allExams) }
                 renderExams()
                 UiFeedback.showMessage(listContainer, "已成功同步 ${parsed.size} 门考试安排", palette)
             } else if (snapshot.isNotEmpty()) {
@@ -408,7 +408,7 @@ class ExamScheduleActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_LOGIN && resultCode == RESULT_OK) {
+        if (accountData.isCurrent && requestCode == REQ_LOGIN && resultCode == RESULT_OK) {
             startSyncExams()
         }
     }
@@ -424,7 +424,7 @@ class ExamScheduleActivity : AppCompatActivity() {
         syncWebView.addJavascriptInterface(ExamBridge(), "ExamScheduleBridge")
         syncWebView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                if (fetchFinished.get() || !request.isForMainFrame) return null
+                if (!accountData.isCurrent || fetchFinished.get() || !request.isForMainFrame) return null
                 val url = request.url
                 if (url.host != TpassConfig.IEDU_HOST || request.method != "GET") return null
                 if (url.encodedPath?.endsWith(".do") != true) return null
@@ -469,6 +469,7 @@ class ExamScheduleActivity : AppCompatActivity() {
     private inner class ExamBridge {
         @JavascriptInterface
         fun onCaptured(url: String, payload: String) {
+            if (!accountData.isCurrent) return
             if (ExamScheduleParser.isLikelyExamPayload(payload)) {
                 synchronized(capturedBuffer) { capturedBuffer.add(payload) }
                 mainHandler.removeCallbacksAndMessages(null)

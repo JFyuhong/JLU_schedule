@@ -12,6 +12,21 @@ import java.io.File
 
 class CampusCookieJarTest {
 
+    @Test
+    fun `late response cannot restore a retired account session`() {
+        val file = File(tmp.root, "retired-cookies.json")
+        val old = CampusCookieJar(file)
+        old.importFromCookieHeader(casUrl, "CASTGC=alice")
+        old.retire()
+        val current = CampusCookieJar(file)
+        current.importFromCookieHeader(casUrl, "CASTGC=bob")
+        old.saveFromResponse(casUrl, listOf(Cookie.Builder()
+            .name("CASTGC").value("late-alice").domain("cas.jlu.edu.cn").build()))
+        old.importFromCookieHeader(casUrl, "CASTGC=another-late-alice")
+        assertTrue(old.loadForRequest(casUrl).isEmpty())
+        assertEquals("bob", CampusCookieJar(file).getCastgc())
+    }
+
     @get:Rule
     val tmp = TemporaryFolder()
 

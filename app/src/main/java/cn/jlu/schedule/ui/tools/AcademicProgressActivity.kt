@@ -25,7 +25,6 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import cn.jlu.schedule.R
@@ -60,7 +59,7 @@ import javax.net.ssl.HttpsURLConnection
  * 3. 支持全功能手动编辑指标与已修学分，自由增删模块；
  * 4. 教务原系统网页直达。
  */
-class AcademicProgressActivity : AppCompatActivity() {
+class AcademicProgressActivity : AccountScopedActivity() {
 
     private lateinit var palette: ThemePalette
     private lateinit var percentText: TextView
@@ -150,7 +149,7 @@ class AcademicProgressActivity : AppCompatActivity() {
     }
 
     private fun loadPlan() {
-        currentPlan = AcademicProgressStore.load(filesDir)
+        currentPlan = withAccountData { AcademicProgressStore.load(it) } ?: AcademicProgressPlan()
         renderPlan()
     }
 
@@ -260,7 +259,7 @@ class AcademicProgressActivity : AppCompatActivity() {
         syncWebView.addJavascriptInterface(PyfaBridge(), "JluPyfaBridge")
         syncWebView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                if (fetchFinished.get() || !request.isForMainFrame) return null
+                if (!accountData.isCurrent || fetchFinished.get() || !request.isForMainFrame) return null
                 val url = request.url
                 if (url.host != TpassConfig.IEDU_HOST || request.method != "GET") return null
                 if (url.encodedPath?.endsWith(".do") != true) return null
@@ -272,7 +271,7 @@ class AcademicProgressActivity : AppCompatActivity() {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                if (fetchFinished.get()) return
+                if (!accountData.isCurrent || fetchFinished.get()) return
                 if (fetchServedLoginHtml.compareAndSet(true, false)) {
                     handleFetchLogin()
                     return
@@ -290,6 +289,7 @@ class AcademicProgressActivity : AppCompatActivity() {
     }
 
     private fun startSyncFromWeb() {
+        if (!accountData.isCurrent) return
         if (!JwApiClient.canRestoreSession(this)) {
             startActivityForResult(Intent(this, LoginActivity::class.java), REQ_LOGIN)
             return
@@ -358,10 +358,10 @@ class AcademicProgressActivity : AppCompatActivity() {
     }
 
     private fun onPyfaPayloadCaptured(url: String, payload: String) {
-        if (fetchFinished.get()) return
+        if (!accountData.isCurrent || fetchFinished.get()) return
         val parsed = PyfaTranscriptParser.parse(payload) ?: return
 
-        if (!fetchFinished.compareAndSet(false, true)) return
+        if (!accountData.isCurrent || !fetchFinished.compareAndSet(false, true)) return
         Log.i(TAG, "Pyfa payload parsed successfully from $url: ${parsed.requirements.size} categories")
 
         lifecycleScope.launch {
@@ -369,7 +369,7 @@ class AcademicProgressActivity : AppCompatActivity() {
                 lastUpdated = System.currentTimeMillis(),
                 source = AcademicProgressPlan.SOURCE_WEB
             )
-            AcademicProgressStore.save(filesDir, currentPlan)
+            withAccountData { AcademicProgressStore.save(it, currentPlan) }
 
             finishSync(
                 success = true,
@@ -414,20 +414,22 @@ class AcademicProgressActivity : AppCompatActivity() {
         val mimeType = connection.contentType?.substringBefore(';')?.trim() ?: "text/html"
         val body = connection.inputStream.use { it.readBytes() }
 
-        val setCookies = connection.headerFields["Set-Cookie"] ?: emptyList()
-        if (setCookies.isNotEmpty()) {
-            val cookieManager = CookieManager.getInstance()
-            val host = target.host.orEmpty()
-            for (cookieHeader in setCookies) {
-                cookieManager.setCookie(target.toString(), cookieHeader)
-                if (host.isNotBlank()) {
-                    cookieManager.setCookie("https://$host/", cookieHeader)
-                    cookieManager.setCookie("https://$host/jwapp/", cookieHeader)
-                    cookieManager.setCookie("https://$host/jwapp/sys/xywccx/", cookieHeader)
+        withAccountData {
+            val setCookies = connection.headerFields["Set-Cookie"] ?: emptyList()
+            if (setCookies.isNotEmpty()) {
+                val cookieManager = CookieManager.getInstance()
+                val host = target.host.orEmpty()
+                for (cookieHeader in setCookies) {
+                    cookieManager.setCookie(target.toString(), cookieHeader)
+                    if (host.isNotBlank()) {
+                        cookieManager.setCookie("https://$host/", cookieHeader)
+                        cookieManager.setCookie("https://$host/jwapp/", cookieHeader)
+                        cookieManager.setCookie("https://$host/jwapp/sys/xywccx/", cookieHeader)
+                    }
                 }
+                cookieManager.flush()
+                JwApiClient.importAllWebViewCookies(this@AcademicProgressActivity)
             }
-            cookieManager.flush()
-            JwApiClient.importAllWebViewCookies(this@AcademicProgressActivity)
         }
 
         if (!mimeType.contains("html", ignoreCase = true)) {
@@ -461,7 +463,7 @@ class AcademicProgressActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_LOGIN && resultCode == RESULT_OK) {
+        if (accountData.isCurrent && requestCode == REQ_LOGIN && resultCode == RESULT_OK) {
             startSyncFromWeb()
         }
     }
@@ -471,7 +473,7 @@ class AcademicProgressActivity : AppCompatActivity() {
     // ==========================================
 
     private fun autoCalculateFromGrades() {
-        val grades = GradeStore.load(filesDir)
+        val grades = withAccountData { GradeStore.load(it) }.orEmpty()
         if (grades.isEmpty()) {
             UiFeedback.showMessage(categoryContainer, "暂无本地成绩，请先在「成绩查询」中同步教务成绩", palette)
             return
@@ -531,7 +533,7 @@ class AcademicProgressActivity : AppCompatActivity() {
             lastUpdated = System.currentTimeMillis(),
             source = AcademicProgressPlan.SOURCE_ESTIMATED
         )
-        AcademicProgressStore.save(filesDir, currentPlan)
+        withAccountData { AcademicProgressStore.save(it, currentPlan) }
         renderPlan()
 
         UiFeedback.showMessage(
@@ -673,7 +675,7 @@ class AcademicProgressActivity : AppCompatActivity() {
                     lastUpdated = System.currentTimeMillis(),
                     source = AcademicProgressPlan.SOURCE_MANUAL
                 )
-                AcademicProgressStore.save(filesDir, currentPlan)
+                withAccountData { AcademicProgressStore.save(it, currentPlan) }
                 renderPlan()
                 UiFeedback.showMessage(categoryContainer, "培养方案与学业指标已更新", palette)
             }
