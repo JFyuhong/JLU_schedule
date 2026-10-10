@@ -24,8 +24,12 @@ object DoScheduleParser {
     }
 
     private val segmentRegex =
-        Regex("""^\s*(.*?)\s*星期([一二三四五六日天])\s*第\s*(\d+)\s*节?\s*[-—–~～至]\s*第?\s*(\d+)\s*节?\s*(.*)$""")
-    private val weekItemRegex = Regex("""第?(\d+)\s*(?:-\s*(\d+))?\s*周(?:\s*[（(]\s*(单|双)\s*[)）]|\s*[单双])?""")
+        Regex("""^\s*(.*?)\s*星期([一二三四五六日天1-7])\s*[,，]?\s*第\s*(\d+)\s*节?\s*[-—–~～至]\s*第?\s*(\d+)\s*节?\s*(.*)$""")
+    private val weekdayMarkerRegex = Regex("""星期[一二三四五六日天1-7]""")
+    private const val WEEK_NUMBER_PATTERN = """第?\s*\d+\s*(?:[-—–~～至]\s*\d+)?"""
+    private const val WEEK_GROUP_PATTERN = """$WEEK_NUMBER_PATTERN(?:\s*[,，、]\s*$WEEK_NUMBER_PATTERN)*\s*周(?:\s*[（(]\s*[单双]\s*[)）]|\s*[单双])?"""
+    private val weekPrefixRegex = Regex("""(?:$WEEK_GROUP_PATTERN(?:\s*[,，、]\s*$WEEK_GROUP_PATTERN)*|待定|[单双]周)\s*[,，]?\s*$""")
+    private val weekItemRegex = Regex("""第?(\d+)\s*(?:[-—–~～至]\s*(\d+))?\s*周(?:\s*[（(]\s*(单|双)\s*[)）]|\s*(单|双))?""")
     private val discreteWeeksRegex = Regex("""^第?\s*(\d+(?:\s*[,，、]\s*\d+)+)\s*周?\s*(?:[（(]\s*(单|双)\s*[)）])?\s*周?$""")
 
     fun parse(rawContent: String): List<CourseSchedule> {
@@ -74,36 +78,34 @@ object DoScheduleParser {
     }
 
     private fun splitSegments(text: String): List<String> {
-        val pieces = text.split(",", "，", ";", "；", "\n")
-        val result = mutableListOf<String>()
-        val buffer = StringBuilder()
-
-        for (piece in pieces) {
-            if (buffer.isNotEmpty()) {
-                buffer.append('，')
-            }
-            buffer.append(piece.trim())
-
-            if (buffer.contains("星期") && buffer.contains("节")) {
-                result += buffer.toString().trim()
-                buffer.clear()
+        // Commas separate both fields and meetings, and also occur inside week lists/locations.
+        // Find each weekday and its preceding week expression instead of splitting on commas.
+        val weekdays = weekdayMarkerRegex.findAll(text).toList()
+        if (weekdays.isEmpty()) return listOf(text)
+        val starts = mutableListOf(0)
+        for (index in 1 until weekdays.size) {
+            val betweenStart = weekdays[index - 1].range.last + 1
+            val between = text.substring(betweenStart, weekdays[index].range.first)
+            val weekPrefix = weekPrefixRegex.find(between)
+            starts += if (weekPrefix != null) {
+                betweenStart + weekPrefix.range.first
+            } else {
+                val separator = between.indexOfLast { it == ';' || it == '；' || it == '\n' }
+                if (separator >= 0) betweenStart + separator + 1 else weekdays[index].range.first
             }
         }
-
-        if (buffer.isNotEmpty()) {
-            result += buffer.toString().trim()
-        }
-
-        return result.filter { it.isNotBlank() }
+        return starts.mapIndexed { index, start ->
+            text.substring(start, starts.getOrElse(index + 1) { text.length }).trimFieldSeparators()
+        }.filter { it.isNotBlank() }
     }
 
     private fun parseSegment(segment: String, row: RawCourseRow): MeetingTime? {
         val match = segmentRegex.matchEntire(segment) ?: return null
-        val weekExpr = match.groupValues[1].trim()
+        val weekExpr = match.groupValues[1].trimFieldSeparators().ifBlank { row.weekText.orEmpty() }
         val weekdayText = match.groupValues[2].trim()
         val start = match.groupValues[3].toIntOrNull() ?: return null
         val end = match.groupValues[4].toIntOrNull() ?: return null
-        val location = match.groupValues[5].trim().ifBlank {
+        val location = match.groupValues[5].trimFieldSeparators().ifBlank {
             row.classroomName ?: row.buildingName.orEmpty()
         }
 
@@ -169,7 +171,7 @@ object DoScheduleParser {
         val match = weekItemRegex.find(part.trim()) ?: return null
         val start = match.groupValues[1].toIntOrNull() ?: return null
         val end = match.groupValues[2].toIntOrNull() ?: start
-        val parity = when (match.groupValues[3]) {
+        val parity = when (match.groupValues[3].ifBlank { match.groupValues[4] }) {
             "单" -> WeekParity.ODD
             "双" -> WeekParity.EVEN
             else -> WeekParity.ALL
@@ -185,15 +187,17 @@ object DoScheduleParser {
     }
 
     private fun parseWeekdayFromChinese(value: String): Weekday? = when (value) {
-        "一" -> Weekday.MONDAY
-        "二" -> Weekday.TUESDAY
-        "三" -> Weekday.WEDNESDAY
-        "四" -> Weekday.THURSDAY
-        "五" -> Weekday.FRIDAY
-        "六" -> Weekday.SATURDAY
-        "日", "天" -> Weekday.SUNDAY
+        "一", "1" -> Weekday.MONDAY
+        "二", "2" -> Weekday.TUESDAY
+        "三", "3" -> Weekday.WEDNESDAY
+        "四", "4" -> Weekday.THURSDAY
+        "五", "5" -> Weekday.FRIDAY
+        "六", "6" -> Weekday.SATURDAY
+        "日", "天", "7" -> Weekday.SUNDAY
         else -> null
     }
+
+    private fun String.trimFieldSeparators(): String = trim { it.isWhitespace() || it in ",，;；" }
 
     private fun parseWeekdayFromNumber(value: Int): Weekday? = when (value) {
         1 -> Weekday.MONDAY
