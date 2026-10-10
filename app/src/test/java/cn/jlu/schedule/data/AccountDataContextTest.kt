@@ -14,6 +14,35 @@ class AccountDataContextTest {
     private val aliceGrade = ImportedGrade("A", "Alice course", 2.0, "90", "2025-1")
     private val bobGrade = ImportedGrade("B", "Bob course", 3.0, "80", "2025-1")
 
+    @Test fun accountChangesIdentifyWhyAndWhereAnInterruptedSyncMayResume() {
+        val context = AccountDataContext(temp.root)
+        val events = mutableListOf<AccountDataContext.Change>()
+        context.observe { events.add(it) }
+        val original = context.capture()
+        context.authenticated(original, "alice", "ticket-a")
+        val authenticated = events.single()
+        assertEquals(AccountDataContext.ChangeReason.AUTHENTICATED, authenticated.reason)
+        assertTrue(authenticated.currentScope.isCurrent)
+        assertNotEquals(original.identityKey, authenticated.currentScope.identityKey)
+        context.clearSession()
+        assertEquals(AccountDataContext.ChangeReason.SIGNED_OUT, events.last().reason)
+        assertFalse(authenticated.currentScope.isCurrent)
+        context.observeSession("ticket-b")
+        context.observeSession("ticket-c")
+        assertEquals(AccountDataContext.ChangeReason.WEB_SESSION_CHANGED, events.last().reason)
+        assertTrue(events.last().currentScope.isCurrent)
+    }
+
+    @Test fun continuationKeysDoNotReviveAfterSameAccountReloginOrProcessRestart() {
+        val context = AccountDataContext(temp.root)
+        context.authenticated(context.capture(), "alice", "ticket-a")
+        val first = context.capture().identityKey
+        context.clearSession()
+        context.authenticated(context.capture(), "alice", "ticket-a2")
+        assertNotEquals(first, context.capture().identityKey)
+        assertNotEquals(context.capture().identityKey, AccountDataContext(temp.root).capture().identityKey)
+    }
+
     @Test fun accountSwitchDoesNotMergeOldGradesOrGpaAndCanRestoreOfflineData() {
         val context = AccountDataContext(temp.root)
         context.authenticated(context.capture(), "alice", "ticket-a")

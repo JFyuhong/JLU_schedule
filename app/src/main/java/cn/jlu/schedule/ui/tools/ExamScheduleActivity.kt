@@ -50,11 +50,16 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * 考试查询界面：期末/期中考试日程、地点、座位号及倒计时，支持从教务同步与手动自定义添加。
  */
 class ExamScheduleActivity : AccountScopedActivity() {
+
+    override val accountSyncInProgress: Boolean get() = ::syncBtn.isInitialized && !syncBtn.isEnabled
+    override fun restartAccountSync() = startSyncExams()
 
     private lateinit var palette: ThemePalette
     private lateinit var progressBar: ProgressBar
@@ -342,6 +347,8 @@ class ExamScheduleActivity : AccountScopedActivity() {
         syncBtn.text = "正在验证校园会话…"
         lifecycleScope.launch {
             val valid = JwApiClient.ensureSession(this@ExamScheduleActivity)
+            currentCoroutineContext().ensureActive()
+            if (!accountData.isCurrent) return@launch
             if (!valid) {
                 progressBar.visibility = View.GONE
                 syncBtn.isEnabled = true

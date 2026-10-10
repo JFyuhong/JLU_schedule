@@ -43,6 +43,8 @@ import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -91,6 +93,9 @@ class GpaCalculatorActivity : AccountScopedActivity() {
     private var fetchAutoQueryTries = 0
     private val fetchFinished = AtomicBoolean(false)
     private val fetchServedLoginHtml = AtomicBoolean(false)
+
+    override val accountSyncInProgress: Boolean get() = importing
+    override fun restartAccountSync() = importFromJw()
 
     private val loginLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -194,6 +199,8 @@ class GpaCalculatorActivity : AccountScopedActivity() {
         lifecycleScope.launch {
             // 通道一：原生 OkHttp 极速直连（无需等待 WebView 下载渲染数兆脚本，直接拉取历年全量）
             val nativeGrades = runCatching { JwApiClient.fetchAllGrades(this@GpaCalculatorActivity) }.getOrDefault(emptyList())
+            currentCoroutineContext().ensureActive()
+            if (!accountData.isCurrent) return@launch
             if (nativeGrades.isNotEmpty()) {
                 val semesterCount = nativeGrades.map { it.semesterCode }.filter { it.isNotBlank() }.distinct().size
                 if (nativeGrades.size >= 25 || semesterCount > 2) {
@@ -357,6 +364,8 @@ class GpaCalculatorActivity : AccountScopedActivity() {
         resultMeta.text = getString(R.string.import_quick_progress_relogin)
         lifecycleScope.launch {
             val result = JwApiClient.silentLogin(this@GpaCalculatorActivity)
+            currentCoroutineContext().ensureActive()
+            if (!accountData.isCurrent) return@launch
             if (result is CasLoginResult.Success) {
                 JwApiClient.syncJarToWebView(this@GpaCalculatorActivity)
                 if (!fetchFinished.get()) fetchWebView.post { fetchWebView.loadUrl(GRADE_PAGE_URL) }

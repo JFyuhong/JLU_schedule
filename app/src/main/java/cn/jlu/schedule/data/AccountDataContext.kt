@@ -14,7 +14,11 @@ class AccountDataContext(private val filesDir: File) {
     private var owner: String
     private var sessionHash: String
     private var generation = 0L
-    private val listeners = LinkedHashSet<() -> Unit>()
+    private val instanceId = UUID.randomUUID().toString()
+    private val listeners = LinkedHashSet<(Change) -> Unit>()
+
+    enum class ChangeReason { AUTHENTICATED, SIGNED_OUT, WEB_SESSION_CHANGED }
+    data class Change(val reason: ChangeReason, val currentScope: Scope)
 
     init {
         val saved = runCatching { marker.readLines() }.getOrDefault(emptyList())
@@ -26,6 +30,8 @@ class AccountDataContext(private val filesDir: File) {
 
     inner class Scope internal constructor(private val id: String, private val version: Long) {
         val isCurrent: Boolean get() = synchronized(lock) { version == generation && id == owner }
+        /** A saved continuation must not survive another account change or a process restart. */
+        val identityKey: String get() = "$instanceId/$version/$id"
 
         /** Check ownership and perform the complete read/write under the same lock. */
         fun <T> use(block: (File) -> T): T? = synchronized(lock) {
@@ -35,16 +41,16 @@ class AccountDataContext(private val filesDir: File) {
 
     fun capture(): Scope = synchronized(lock) { Scope(owner, generation) }
 
-    fun observe(listener: () -> Unit): () -> Unit {
+    fun observe(listener: (Change) -> Unit): () -> Unit {
         synchronized(lock) { listeners.add(listener) }
         return { synchronized(lock) { listeners.remove(listener) }; Unit }
     }
 
     /** Logout/new interactive login: preserve old files, but never show them to the next session. */
-    fun clearSession() = change { owner = anonymousOwner(); sessionHash = "" }
+    fun clearSession() = change(ChangeReason.SIGNED_OUT) { owner = anonymousOwner(); sessionHash = "" }
 
     /** A native CAS success authenticates the supplied ID; a stored ID alone does not. */
-    fun authenticated(scope: Scope, studentId: String, token: String?) = change {
+    fun authenticated(scope: Scope, studentId: String, token: String?) = change(ChangeReason.AUTHENTICATED) {
         if (scope.isCurrent) {
             owner = "account_${hash(studentId.trim())}"
             sessionHash = token?.let(::hash).orEmpty()
@@ -54,7 +60,7 @@ class AccountDataContext(private val filesDir: File) {
     /** A different CAS ticket may be a QR/manual login as another person. Do not infer its ID. */
     fun observeSession(token: String?) {
         if (token.isNullOrBlank()) return
-        change {
+        change(ChangeReason.WEB_SESSION_CHANGED) {
             val nextHash = hash(token)
             if (sessionHash != nextHash) {
                 if (sessionHash.isNotEmpty() || owner.startsWith("account_")) owner = anonymousOwner()
@@ -63,18 +69,18 @@ class AccountDataContext(private val filesDir: File) {
         }
     }
 
-    private fun change(update: () -> Unit) {
-        val callbacks = synchronized(lock) {
+    private fun change(reason: ChangeReason, update: () -> Unit) {
+        val notification = synchronized(lock) {
             val previous = owner
             val previousSession = sessionHash
             update()
             if (previous != owner || previousSession != sessionHash) persist()
-            if (previous == owner) emptyList() else {
+            if (previous == owner) null else {
                 generation++
-                listeners.toList()
+                Change(reason, Scope(owner, generation)) to listeners.toList()
             }
         }
-        callbacks.forEach { it() }
+        notification?.let { (event, callbacks) -> callbacks.forEach { it(event) } }
     }
 
     private fun persist() {

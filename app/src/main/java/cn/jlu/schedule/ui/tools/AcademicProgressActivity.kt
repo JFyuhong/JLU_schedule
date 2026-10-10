@@ -44,6 +44,8 @@ import cn.jlu.schedule.ui.theme.ThemePalette
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.InputStream
@@ -81,6 +83,9 @@ class AcademicProgressActivity : AccountScopedActivity() {
     private var silentLoginTried = false
     private var syncTimeoutJob: Job? = null
     private var domExtractJob: Job? = null
+
+    override val accountSyncInProgress: Boolean get() = isSyncing.get()
+    override fun restartAccountSync() = startSyncFromWeb()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemePaletteProvider.applyNightMode(this)
@@ -328,6 +333,8 @@ class AcademicProgressActivity : AccountScopedActivity() {
         silentLoginTried = true
         lifecycleScope.launch {
             val result = JwApiClient.silentLogin(this@AcademicProgressActivity)
+            currentCoroutineContext().ensureActive()
+            if (!accountData.isCurrent) return@launch
             if (result is CasLoginResult.Success) {
                 JwApiClient.syncJarToWebView(this@AcademicProgressActivity)
                 if (!fetchFinished.get()) {

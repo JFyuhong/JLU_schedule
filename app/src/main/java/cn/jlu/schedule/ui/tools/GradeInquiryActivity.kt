@@ -46,6 +46,8 @@ import cn.jlu.schedule.ui.theme.UiFeedback
 import cn.jlu.schedule.ui.theme.applySystemBarPadding
 import cn.jlu.schedule.ui.theme.applySystemBarIcons
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
@@ -85,6 +87,9 @@ class GradeInquiryActivity : AccountScopedActivity() {
     private var autoQueryJob: Job? = null
     private var fetchWatchdogJob: Job? = null
     private var fetchQuietJob: Job? = null
+
+    override val accountSyncInProgress: Boolean get() = ::syncBtn.isInitialized && !syncBtn.isEnabled
+    override fun restartAccountSync() = startSyncGrades()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemePaletteProvider.applyNightMode(this)
@@ -503,6 +508,8 @@ class GradeInquiryActivity : AccountScopedActivity() {
         lifecycleScope.launch {
             // 通道一：原生 OkHttp 极速直连（无需等待 WebView 下载渲染数兆脚本，直接拉取历年全量）
             val nativeGrades = runCatching { JwApiClient.fetchAllGrades(this@GradeInquiryActivity) }.getOrDefault(emptyList())
+            currentCoroutineContext().ensureActive()
+            if (!accountData.isCurrent) return@launch
             if (nativeGrades.isNotEmpty()) {
                 val semesterCount = nativeGrades.map { it.semesterCode }.filter { it.isNotBlank() }.distinct().size
                 if (nativeGrades.size >= 25 || semesterCount > 2) {
@@ -649,6 +656,8 @@ class GradeInquiryActivity : AccountScopedActivity() {
         silentLoginTried = true
         lifecycleScope.launch {
             val result = JwApiClient.silentLogin(this@GradeInquiryActivity)
+            currentCoroutineContext().ensureActive()
+            if (!accountData.isCurrent) return@launch
             if (result is CasLoginResult.Success) {
                 JwApiClient.syncJarToWebView(this@GradeInquiryActivity)
                 if (!fetchFinished.get()) {
