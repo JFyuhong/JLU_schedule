@@ -7,6 +7,9 @@ import cn.jlu.schedule.auth.CasClient
 import cn.jlu.schedule.auth.CasLoginResult
 import cn.jlu.schedule.auth.JluCredentialStore
 import cn.jlu.schedule.auth.TpassConfig
+import cn.jlu.schedule.data.AccountDataContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -76,6 +79,7 @@ object JwApiClient {
 
     /** 登录后/拉取数据前，把 WebView 各业务路径的会话全部迁入原生 CookieJar */
     fun importAllWebViewCookies(context: Context): Int {
+        refreshAccountContext(context)
         val manager = CookieManager.getInstance()
         var imported = 0
         for (target in WEBVIEW_IMPORT_URLS) {
@@ -86,6 +90,14 @@ object JwApiClient {
         return imported
     }
 
+    /** Observe the actual CAS session, never the ID of credentials merely saved for autofill. */
+    fun refreshAccountContext(context: Context) {
+        val header = CookieManager.getInstance().getCookie(TpassConfig.CAS_LOGIN_URL).orEmpty()
+        val token = header.split(';').map { it.trim() }
+            .firstOrNull { it.startsWith("CASTGC=") }?.substringAfter('=')
+        AccountDataContext.get(context.filesDir).observeSession(token)
+    }
+
     /** 用存储的加密凭据静默重登（会话失效时调用） */
     suspend fun silentLogin(context: Context): CasLoginResult {
         val credentials = JluCredentialStore.load(context)
@@ -93,7 +105,20 @@ object JwApiClient {
             android.util.Log.i("JwApiClient", "silentLogin skipped: no saved credentials")
             return CasLoginResult.NeedsManualLogin
         }
-        return CasClient(get(context)).login(credentials.studentId, credentials.password)
+        val accounts = AccountDataContext.get(context.filesDir)
+        val scope = accounts.capture()
+        var authenticatedCredentials = false
+        val result = CasClient(get(context)).login(credentials.studentId, credentials.password,
+            onCredentialsAuthenticated = { authenticatedCredentials = true })
+        currentCoroutineContext().ensureActive()
+        if (!scope.isCurrent) return CasLoginResult.NeedsManualLogin
+        if (result is CasLoginResult.Success) {
+            syncJarToWebView(context)
+            if (authenticatedCredentials) {
+                accounts.authenticated(scope, credentials.studentId, cookieJar(context).getCastgc())
+            }
+        }
+        return result
     }
 
     /** 校验业务会话；失效时只尝试一次已保存凭据的静默登录。 */
@@ -142,7 +167,13 @@ object JwApiClient {
 
     /** 清空会话（登出） */
     fun clearSession(context: Context, onComplete: (() -> Unit)? = null) {
-        cookieJar(context).clear()
+        AccountDataContext.get(context.filesDir).clearSession()
+        synchronized(this) {
+            cached?.dispatcher?.cancelAll()
+            cookieJar(context).retire()
+            cached = null
+            cachedCookieJar = null
+        }
         CookieManager.getInstance().removeAllCookies {
             CookieManager.getInstance().flush()
             onComplete?.invoke()

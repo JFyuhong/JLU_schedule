@@ -32,7 +32,8 @@ class CasClient(private val client: OkHttpClient) {
     suspend fun login(
         username: String,
         password: String,
-        serviceUrl: String = TpassConfig.IEDU_PORTAL_URL
+        serviceUrl: String = TpassConfig.IEDU_PORTAL_URL,
+        onCredentialsAuthenticated: (() -> Unit)? = null
     ): CasLoginResult = withContext(Dispatchers.IO) {
         val pageUrl = "${TpassConfig.CAS_LOGIN_URL}?service=${urlencode(serviceUrl)}"
         try {
@@ -72,6 +73,9 @@ class CasClient(private val client: OkHttpClient) {
                     val stillOnLogin = finalUrl.host == TpassConfig.CAS_HOST &&
                         finalBody.contains("id=\"loginForm\"")
                     if (!stillOnLogin) {
+                        if (loginResponse.isSuccessful && finalUrl.host == TpassConfig.IEDU_HOST) {
+                            onCredentialsAuthenticated?.invoke()
+                        }
                         android.util.Log.i("CasClient", "tpass login ok, final=${finalUrl.host}${finalUrl.encodedPath}")
                         return@withContext CasLoginResult.Success
                     }

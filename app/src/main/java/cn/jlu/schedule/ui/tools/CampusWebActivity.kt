@@ -19,10 +19,10 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
 import cn.jlu.schedule.R
 import cn.jlu.schedule.auth.CampusCookieJar
 import cn.jlu.schedule.auth.TpassConfig
+import cn.jlu.schedule.data.AcademicProgressStore
 import cn.jlu.schedule.data.AppPreferences
 import cn.jlu.schedule.remote.JwApiClient
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
@@ -30,7 +30,7 @@ import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 /**
  * 智慧校园通用网页容器，自动注入校内会话 Cookie 并处理校园私有证书信任。
  */
-class CampusWebActivity : AppCompatActivity() {
+class CampusWebActivity : AccountScopedActivity() {
 
     private lateinit var webView: WebView
     private lateinit var progressBar: ProgressBar
@@ -99,7 +99,7 @@ class CampusWebActivity : AppCompatActivity() {
                 @android.webkit.JavascriptInterface
                 fun onCaptured(url: String, payload: String) {
                     val parsed = cn.jlu.schedule.parser.PyfaTranscriptParser.parse(payload) ?: return
-                    cn.jlu.schedule.data.AcademicProgressStore.save(filesDir, parsed)
+                    withAccountData { AcademicProgressStore.save(it, parsed) }
                 }
             }, "JluPyfaBridge")
         }
