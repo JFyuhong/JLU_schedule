@@ -38,6 +38,7 @@ import cn.jlu.schedule.ui.auth.LoginActivity
 import cn.jlu.schedule.ui.importer.ImportBrowserActivity
 import cn.jlu.schedule.ui.importer.QuickImportActivity
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
+import cn.jlu.schedule.ui.theme.BackgroundReadability
 import cn.jlu.schedule.ui.theme.UiFeedback
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -96,8 +97,13 @@ class TimetableFragment : Fragment() {
         importScheduleButton = view.findViewById(R.id.importScheduleButton)
 
         val palette = ThemePaletteProvider.fromContext(requireContext())
+        BackgroundReadability.protectPanel(
+            view.findViewById(R.id.timetableHeader), palette, radiusDp = 0f
+        )
         addCourseButton.imageTintList = ColorStateList.valueOf(palette.iconTint)
         importScheduleButton.imageTintList = ColorStateList.valueOf(palette.iconTint)
+        addCourseButton.backgroundTintList = ColorStateList.valueOf(palette.buttonBackground)
+        importScheduleButton.backgroundTintList = ColorStateList.valueOf(palette.buttonBackground)
 
         observeTimetable()
 

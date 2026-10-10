@@ -39,6 +39,7 @@ import cn.jlu.schedule.data.ScheduleRepository
 import cn.jlu.schedule.data.SemesterStartDatePolicy
 import cn.jlu.schedule.domain.SectionTimes
 import cn.jlu.schedule.ui.theme.ThemePalette
+import cn.jlu.schedule.ui.theme.BackgroundReadability
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
 import com.yalantis.ucrop.UCrop
@@ -90,6 +91,7 @@ class SettingsFragment : Fragment() {
                     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", saved)
                     AppPreferences.setCustomBackgroundUri(context, uri.toString())
                     (activity as? MainActivity)?.refreshCustomBackground()
+                    view?.let { refreshBackgroundPanels(it) }
                     UiFeedback.showMessage(view, "背景已更新", paletteForFeedback())
                 }
                 UCrop.RESULT_ERROR -> throw result.data?.let(UCrop::getError)
@@ -157,6 +159,7 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         val palette = ThemePaletteProvider.fromContext(requireContext())
         val density = resources.displayMetrics.density
+        refreshBackgroundPanels(view)
 
         // 卡片与分隔线按主题色板着色
         listOf(
@@ -238,6 +241,7 @@ class SettingsFragment : Fragment() {
             AppPreferences.setCustomBackgroundUri(requireContext(), null)
             runCatching { File(requireContext().filesDir, "custom_background.jpg").delete() }
             (activity as? MainActivity)?.refreshCustomBackground()
+            refreshBackgroundPanels(view)
             UiFeedback.showMessage(view, "已恢复默认背景", palette)
         }
         view.findViewById<View>(R.id.rowExportText).setOnClickListener {
@@ -430,7 +434,20 @@ class SettingsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        view?.let { refreshAccountCard(it) }
+        view?.let {
+            refreshAccountCard(it)
+            refreshBackgroundPanels(it)
+        }
+    }
+
+    private fun refreshBackgroundPanels(view: View) {
+        val palette = ThemePaletteProvider.fromContext(view.context)
+        BackgroundReadability.protectPanel(view.findViewById(R.id.settingsHeader), palette)
+        view.findViewById<TextView>(R.id.settingsFooterVersion).apply {
+            BackgroundReadability.protectPanel(this, palette, radiusDp = 12f)
+            val padding = (8 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+        }
     }
 
     override fun onDestroyView() {

@@ -6,10 +6,13 @@ import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.isVisible
+import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -28,6 +31,7 @@ import cn.jlu.schedule.ui.tools.ToolsFragment
 class MainActivity : AppCompatActivity() {
     private lateinit var rootContainer: FrameLayout
     private lateinit var backgroundImage: ImageView
+    private lateinit var backgroundScrim: View
     private lateinit var bottomNav: BottomNavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +42,7 @@ class MainActivity : AppCompatActivity() {
 
         rootContainer = findViewById(R.id.rootContainer)
         backgroundImage = findViewById(R.id.backgroundImage)
+        backgroundScrim = findViewById(R.id.backgroundScrim)
         bottomNav = findViewById(R.id.bottomNav)
         applyUserAppearance()
         refreshCustomBackground()
@@ -113,6 +118,8 @@ class MainActivity : AppCompatActivity() {
         if (uri == null) {
             backgroundImage.setImageDrawable(null)
             backgroundImage.visibility = ImageView.GONE
+            backgroundScrim.visibility = View.GONE
+            applyUserAppearance()
             return
         }
 
@@ -141,11 +148,15 @@ class MainActivity : AppCompatActivity() {
         if (bitmap == null) {
             backgroundImage.setImageDrawable(null)
             backgroundImage.visibility = ImageView.GONE
+            backgroundScrim.visibility = View.GONE
+            applyUserAppearance()
             return
         }
 
         backgroundImage.setImageBitmap(bitmap)
         backgroundImage.visibility = ImageView.VISIBLE
+        backgroundScrim.visibility = View.VISIBLE
+        applyUserAppearance()
     }
 
     fun applyUserAppearance() {
@@ -155,7 +166,12 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = !palette.isDark
         }
         rootContainer.setBackgroundColor(palette.pageBackground)
-        bottomNav.setBackgroundColor(palette.navBackground)
+        // A light tint reduces photo detail in gaps; text itself has opaque reading panels.
+        backgroundScrim.setBackgroundColor(ColorUtils.setAlphaComponent(palette.pageBackground, 72))
+        bottomNav.setBackgroundColor(
+            if (backgroundImage.isVisible) ColorUtils.setAlphaComponent(palette.navBackground, 255)
+            else palette.navBackground
+        )
         val itemColors = ColorStateList(
             arrayOf(
                 intArrayOf(android.R.attr.state_checked),

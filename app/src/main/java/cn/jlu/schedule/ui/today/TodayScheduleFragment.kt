@@ -78,13 +78,14 @@ class TodayScheduleFragment : Fragment() {
         )
         val hasCustomBackground = !AppPreferences.getCustomBackgroundUri(requireContext()).isNullOrBlank()
         root.setBackgroundColor(
-            if (hasCustomBackground) withAlpha(palette.pageBackground, 0.27f) else palette.pageBackground
+            if (hasCustomBackground) Color.TRANSPARENT else palette.pageBackground
         )
         view.findViewById<LinearLayout>(R.id.todaySummaryCard).background =
-            roundedBackground(withAlpha(palette.panelAltBackground, 0.62f))
-        countChip.background = roundedBackground(withAlpha(palette.panelBackground, 0.5f))
-        firstClass.background = roundedBackground(withAlpha(palette.panelBackground, 0.5f))
-        lastClass.background = roundedBackground(withAlpha(palette.panelBackground, 0.5f))
+            roundedBackground(if (hasCustomBackground) palette.panelAltBackground else withAlpha(palette.panelAltBackground, 0.62f))
+        val statBackground = if (hasCustomBackground) palette.panelBackground else withAlpha(palette.panelBackground, 0.5f)
+        countChip.background = roundedBackground(statBackground)
+        firstClass.background = roundedBackground(statBackground)
+        lastClass.background = roundedBackground(statBackground)
         title.setTextColor(themeColors.text)
         subTitle.setTextColor(themeColors.subText)
         countChip.setTextColor(themeColors.text)
@@ -160,6 +161,10 @@ class TodayScheduleFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(dp(56), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(4)
                 }
+                if (hasCustomBackground) {
+                    background = roundedBackground(palette.panelAltBackground)
+                    setPadding(0, dp(6), 0, dp(6))
+                }
                 addView(TextView(ctx).apply {
                     text = periodTimeRanges[start - 1].substringBefore('-')
                     textSize = 13f
@@ -170,7 +175,7 @@ class TodayScheduleFragment : Fragment() {
                     text = periodTimeRanges[end - 1].substringAfter('-')
                     textSize = 10f
                     setTextColor(themeColors.subText)
-                    alpha = 0.8f
+                    alpha = if (hasCustomBackground) 1f else 0.8f
                 })
             }
 
@@ -234,7 +239,7 @@ class TodayScheduleFragment : Fragment() {
                     text = item.meeting.location.ifBlank { "教室待定" }
                     textSize = 13f
                     setTextColor(themeColors.subText)
-                    alpha = 0.9f
+                    alpha = if (hasCustomBackground) 1f else 0.9f
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
