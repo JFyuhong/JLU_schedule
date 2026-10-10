@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
+    <cache-path name="background_crops" path="background_crops/" />
     <files-path
         name="custom_background"
         path="." />
