@@ -18,7 +18,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
@@ -44,6 +43,8 @@ import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,7 +58,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Coldymemos/JLU-GPA-Calculator-for-Windows-Desktop（已获原作者同意）。
  * 手动录入成绩与学分，逐门可排除，实时计算保研绩点 / 加权平均分 / 算术平均分。
  */
-class GpaCalculatorActivity : AppCompatActivity() {
+class GpaCalculatorActivity : AccountScopedActivity() {
 
     private lateinit var palette: ThemePalette
     private val courses = mutableListOf<GpaCourse>()
@@ -93,11 +94,14 @@ class GpaCalculatorActivity : AppCompatActivity() {
     private val fetchFinished = AtomicBoolean(false)
     private val fetchServedLoginHtml = AtomicBoolean(false)
 
+    override val accountSyncInProgress: Boolean get() = importing
+    override fun restartAccountSync() = importFromJw()
+
     private val loginLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
         // 登录成功后自动重试教务导入
-        if (result.resultCode == RESULT_OK) importFromJw()
+        if (accountData.isCurrent && result.resultCode == RESULT_OK) importFromJw()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,7 +111,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
         setContentView(R.layout.activity_gpa_calculator)
 
         palette = ThemePaletteProvider.fromContext(this)
-        courses.addAll(GpaCourseStore.load(filesDir))
+        courses.addAll(withAccountData { GpaCourseStore.load(it) }.orEmpty())
 
         valueGpa = findViewById(R.id.gpaValueGpa)
         valueWeighted = findViewById(R.id.gpaValueWeighted)
@@ -186,6 +190,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
      * 因此用隐藏 WebView 打开成绩查询页，钩子捕获页面自己的成绩响应。
      */
     private fun importFromJw() {
+        if (!accountData.isCurrent) return
         if (importing) return
         importing = true
         importButton.isEnabled = false
@@ -194,6 +199,8 @@ class GpaCalculatorActivity : AppCompatActivity() {
         lifecycleScope.launch {
             // 通道一：原生 OkHttp 极速直连（无需等待 WebView 下载渲染数兆脚本，直接拉取历年全量）
             val nativeGrades = runCatching { JwApiClient.fetchAllGrades(this@GpaCalculatorActivity) }.getOrDefault(emptyList())
+            currentCoroutineContext().ensureActive()
+            if (!accountData.isCurrent) return@launch
             if (nativeGrades.isNotEmpty()) {
                 val semesterCount = nativeGrades.map { it.semesterCode }.filter { it.isNotBlank() }.distinct().size
                 if (nativeGrades.size >= 25 || semesterCount > 2) {
@@ -250,7 +257,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
             val rounds = intArrayOf(2, 6, 11, 17, 23)
             for (i in rounds.indices) {
                 if (i > 0) delay((rounds[i] - rounds[i - 1]) * 1000L) else delay(rounds[i] * 1000L)
-                if (fetchFinished.get()) return@launch
+                if (!accountData.isCurrent || fetchFinished.get()) return@launch
                 val round = i + 1
                 val bridge = GradeCaptureBridge()
                 bridge.autoQuery(round)
@@ -264,7 +271,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
             view: WebView,
             request: WebResourceRequest
         ): WebResourceResponse? {
-            if (fetchFinished.get() || !request.isForMainFrame) return null
+            if (!accountData.isCurrent || fetchFinished.get() || !request.isForMainFrame) return null
             val url = request.url
             if (url.host != TpassConfig.IEDU_HOST || request.method != "GET") return null
             if (url.encodedPath?.endsWith(".do") != true) return null
@@ -282,7 +289,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
         }
 
         override fun onPageFinished(view: WebView, url: String) {
-            if (fetchFinished.get()) return
+            if (!accountData.isCurrent || fetchFinished.get()) return
             if (fetchServedLoginHtml.compareAndSet(true, false)) {
                 handleFetchLogin()
                 return
@@ -310,20 +317,22 @@ class GpaCalculatorActivity : AppCompatActivity() {
         val body = connection.inputStream.use { it.readBytes() }
         Log.i(TAG, "grade page doc $target -> ${connection.responseCode} $mimeType len=${body.size}")
 
-        val setCookies = connection.headerFields["Set-Cookie"] ?: emptyList()
-        if (setCookies.isNotEmpty()) {
-            val cookieManager = CookieManager.getInstance()
-            val host = target.host.orEmpty()
-            for (cookieHeader in setCookies) {
-                cookieManager.setCookie(target.toString(), cookieHeader)
-                if (host.isNotBlank()) {
-                    cookieManager.setCookie("https://$host/", cookieHeader)
-                    cookieManager.setCookie("https://$host/jwapp/", cookieHeader)
-                    cookieManager.setCookie("https://$host/jwapp/sys/cjcx/", cookieHeader)
+        withAccountData {
+            val setCookies = connection.headerFields["Set-Cookie"] ?: emptyList()
+            if (setCookies.isNotEmpty()) {
+                val cookieManager = CookieManager.getInstance()
+                val host = target.host.orEmpty()
+                for (cookieHeader in setCookies) {
+                    cookieManager.setCookie(target.toString(), cookieHeader)
+                    if (host.isNotBlank()) {
+                        cookieManager.setCookie("https://$host/", cookieHeader)
+                        cookieManager.setCookie("https://$host/jwapp/", cookieHeader)
+                        cookieManager.setCookie("https://$host/jwapp/sys/cjcx/", cookieHeader)
+                    }
                 }
+                cookieManager.flush()
+                JwApiClient.importAllWebViewCookies(this@GpaCalculatorActivity)
             }
-            cookieManager.flush()
-            JwApiClient.importAllWebViewCookies(this@GpaCalculatorActivity)
         }
 
         if (!mimeType.contains("html", ignoreCase = true)) {
@@ -355,6 +364,8 @@ class GpaCalculatorActivity : AppCompatActivity() {
         resultMeta.text = getString(R.string.import_quick_progress_relogin)
         lifecycleScope.launch {
             val result = JwApiClient.silentLogin(this@GpaCalculatorActivity)
+            currentCoroutineContext().ensureActive()
+            if (!accountData.isCurrent) return@launch
             if (result is CasLoginResult.Success) {
                 JwApiClient.syncJarToWebView(this@GpaCalculatorActivity)
                 if (!fetchFinished.get()) fetchWebView.post { fetchWebView.loadUrl(GRADE_PAGE_URL) }
@@ -388,7 +399,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
     }
 
     private fun finishFetch(reason: String) {
-        if (!fetchFinished.compareAndSet(false, true)) return
+        if (!accountData.isCurrent || !fetchFinished.compareAndSet(false, true)) return
         fetchWatchdogJob?.cancel()
         fetchQuietJob?.cancel()
         val grades = synchronized(capturedPayloads) {
@@ -427,7 +438,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
         /** 页面上下文内的自动查询：round 1 回报可点元素，切换【全部】并触发全量 AJAX 查询 */
         @JavascriptInterface
         fun autoQuery(round: Int) {
-            if (fetchFinished.get()) return
+            if (!accountData.isCurrent || fetchFinished.get()) return
             val js = """
             (function(){
               // 1. 精准模拟原生鼠标事件点击【全部】tab（触发 jqxTabs 切换与 qb.js 模块初始化）
@@ -589,7 +600,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
             .setMessage(getString(R.string.gpa_clear_confirm))
             .setPositiveButton(getString(R.string.gpa_clear)) { _, _ ->
                 courses.clear()
-                GpaCourseStore.clear(filesDir)
+                withAccountData { GpaCourseStore.clear(it) }
                 render()
                 UiFeedback.showMessage(courseList, getString(R.string.gpa_cleared), palette)
             }
@@ -599,7 +610,7 @@ class GpaCalculatorActivity : AppCompatActivity() {
     }
 
     private fun persist() {
-        runCatching { GpaCourseStore.save(filesDir, courses) }
+        runCatching { withAccountData { GpaCourseStore.save(it, courses) } }
             .onFailure { Log.w(TAG, "save gpa courses failed", it) }
     }
 
