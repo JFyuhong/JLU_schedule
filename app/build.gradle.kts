@@ -14,8 +14,8 @@ android {
         applicationId = "cn.jlu.schedule"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "2.2.2"
+        versionCode = 10
+        versionName = "2.2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,11 +71,18 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.google.android.material:material:1.12.0")
-    implementation("com.github.yalantis:ucrop:2.2.8")
+    implementation("com.github.yalantis:ucrop:2.2.11")
+    // The uCrop JitPack POM omits these runtime dependencies; JPEG crops need ExifInterface.
+    implementation("androidx.exifinterface:exifinterface:1.4.1")
+    implementation("androidx.transition:transition:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    androidTestImplementation("androidx.test:core-ktx:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit-ktx:1.2.1")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }

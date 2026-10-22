@@ -2,11 +2,42 @@ package cn.jlu.schedule.parser
 
 import cn.jlu.schedule.model.WeekParity
 import cn.jlu.schedule.model.Weekday
+import cn.jlu.schedule.domain.WeekScheduleCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class DoScheduleParserTest {
+    @Test
+    fun parse_keepsTeachingArrangementsInTheirOwnWeeksAndLocations() {
+        val courses = DoScheduleParser.parse(
+            javaClass.getResource("/issue3-split-teaching-arrangements.json")!!.readText()
+        )
+        assertEquals(3, courses.size)
+        assertEquals(emptyList<String>(), WeekScheduleCalculator.meetingsForWeek(courses, 5).map { it.course.teacher })
+        assertEquals(listOf("老师B"), WeekScheduleCalculator.meetingsForWeek(courses, 6).map { it.course.teacher })
+        assertEquals(emptyList<String>(), WeekScheduleCalculator.meetingsForWeek(courses, 9).map { it.course.teacher })
+        assertEquals(listOf("老师C"), WeekScheduleCalculator.meetingsForWeek(courses, 10).map { it.course.teacher })
+        val online = WeekScheduleCalculator.meetingsForWeek(courses, 13).single()
+        assertEquals("老师A", online.course.teacher)
+        assertEquals("线上教学-前卫", online.meeting.location)
+        assertEquals(Weekday.FRIDAY, online.meeting.weekday)
+    }
+
+    @Test
+    fun parse_keepsCommaSeparatedLocationsAndDiscreteWeeksAcrossMultipleMeetings() {
+        val course = DoScheduleParser.parse(scheduleJson("""
+            {"KCM":"实验", "YPSJDD":"第1,3,5周（单）,星期1,第1节-第2节,A楼,实验室；6—8周,星期日,第3-4节,B楼", "JASMC":"错误的兜底教室"}
+        """.trimIndent())).single()
+        assertEquals(2, course.meetings.size)
+        assertEquals(listOf(1, 3, 5), course.meetings[0].weekRules.map { it.startWeek })
+        assertEquals("A楼,实验室", course.meetings[0].location)
+        assertEquals(Weekday.SUNDAY, course.meetings[1].weekday)
+        assertEquals(6, course.meetings[1].weekRules.single().startWeek)
+        assertEquals(8, course.meetings[1].weekRules.single().endWeek)
+        assertEquals("B楼", course.meetings[1].location)
+    }
+
     @Test
     fun parse_acceptsNumericFieldsReturnedAsStrings() {
         val courses = DoScheduleParser.parse(

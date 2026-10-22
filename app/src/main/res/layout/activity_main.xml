@@ -21,6 +21,7 @@
         android:id="@+id/backgroundScrim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:importantForAccessibility="no"
         android:visibility="gone" />
 
     <LinearLayout

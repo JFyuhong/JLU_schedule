@@ -79,7 +79,7 @@ class TodayScheduleFragment : Fragment() {
         )
         val hasCustomBackground = !AppPreferences.getCustomBackgroundUri(requireContext()).isNullOrBlank()
         root.setBackgroundColor(
-            if (hasCustomBackground) withAlpha(palette.pageBackground, 0.27f) else palette.pageBackground
+            if (hasCustomBackground) Color.TRANSPARENT else palette.pageBackground
         )
         GlassSurface.apply(view.findViewById(R.id.todaySummaryCard), palette, GlassSurface.Variant.Panel, 24f)
         countChip.background = GlassSurface.drawable(requireContext(), palette, GlassSurface.Variant.Control, 18f)
@@ -160,6 +160,10 @@ class TodayScheduleFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(dp(56), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(4)
                 }
+                if (hasCustomBackground) {
+                    background = roundedBackground(palette.panelAltBackground)
+                    setPadding(0, dp(6), 0, dp(6))
+                }
                 addView(TextView(ctx).apply {
                     text = periodTimeRanges[start - 1].substringBefore('-')
                     textSize = 13f
@@ -170,7 +174,7 @@ class TodayScheduleFragment : Fragment() {
                     text = periodTimeRanges[end - 1].substringAfter('-')
                     textSize = 10f
                     setTextColor(themeColors.subText)
-                    alpha = 0.8f
+                    alpha = if (hasCustomBackground) 1f else 0.8f
                 })
             }
 
@@ -234,7 +238,7 @@ class TodayScheduleFragment : Fragment() {
                     text = item.meeting.location.ifBlank { "教室待定" }
                     textSize = 13f
                     setTextColor(themeColors.subText)
-                    alpha = 0.9f
+                    alpha = if (hasCustomBackground) 1f else 0.9f
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT

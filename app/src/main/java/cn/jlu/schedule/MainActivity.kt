@@ -7,10 +7,9 @@ import android.graphics.Shader
 import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
@@ -150,6 +149,7 @@ class MainActivity : AppCompatActivity() {
             }
             backgroundImage.visibility = ImageView.VISIBLE
             backgroundScrim.visibility = View.VISIBLE
+            applyUserAppearance()
         }
     }
 
@@ -196,6 +196,7 @@ class MainActivity : AppCompatActivity() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) backgroundImage.setRenderEffect(null)
         backgroundImage.visibility = ImageView.GONE
         backgroundScrim.visibility = View.GONE
+        applyUserAppearance()
     }
 
     fun applyUserAppearance() {
@@ -210,7 +211,7 @@ class MainActivity : AppCompatActivity() {
         bottomNav.isItemActiveIndicatorEnabled = false
         bottomNav.itemBackground = GlassSurface.dockItem(this, palette)
         backgroundScrim.setBackgroundColor(
-            androidx.core.graphics.ColorUtils.setAlphaComponent(palette.pageBackground, 0x38)
+            androidx.core.graphics.ColorUtils.setAlphaComponent(palette.pageBackground, 72)
         )
         val itemColors = ColorStateList(
             arrayOf(

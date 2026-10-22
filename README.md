@@ -9,14 +9,17 @@ JLU_schedule 是一个面向吉大学生的课表工具，支持通过教务网�
 ## 安装包下载
 
 - Android: 从 [GitHub Releases](https://github.com/JFyuhong/JLU_schedule/releases) 下载正式安装包。国内镜像目前受域名备案或接入备案阻断，暂不可稳定使用，或从网盘下载 https://pan.baidu.com/s/1gDKDANl-_HBUeZaCHv6C1w?pwd=JLU6 提取码: JLU6。
-- iOS / 鸿蒙：源码位于 `ios/` 与 `harmonyos/` 目录，需自行用 Xcode / DevEco Studio 构建签名（构建说明见 PORTING.md）
-- iOS 备注: 如果你能帮我搞定`99$/每年`的开发者计划的话，上架 TestFlight 也不是不行😂
+- iOS：提供 **iOS 原生质感 PWA 版**（位于 `ios/pwa/`，通过 Safari「添加到主屏幕」即可全屏免签名、离线使用，配备 Safari 一键书签导入脚本）；原生 SwiftUI 源码位于 `ios/`。
+- 鸿蒙：源码位于 `harmonyos/` 目录，需自行用 DevEco Studio 构建签名（构建说明见 PORTING.md）
+- iOS 备注: 考虑到苹果每年 99$ 开发者计划的签名分发门槛，目前强烈推荐 iOS 用户直接使用 PWA 版（添加到主屏幕体验与原生一致）。
 
 ## 效果截图
 
-| 日程 | 课表 | 设置 |
-| -- | -- | -- |
-| ![](media/t1.png) | ![](media/t2.png) | ![](media/t3.png) |
+以下为 Android v2.2.4 实际界面，课程与教师信息均为虚构演示数据。
+
+| 日程 | 课表 | 工具 | 设置 |
+| -- | -- | -- | -- |
+| ![日程页](media/t1.png) | ![课表页](media/t2.png) | ![工具页](media/t3.png) | ![设置页](media/t4.png) |
 
 ## 主要功能
 
@@ -55,10 +58,10 @@ JLU_schedule 是一个面向吉大学生的课表工具，支持通过教务网�
 ## 技术栈
 
 - Android (Kotlin, WebView 导入, Material Components)
-- iOS (SwiftUI, WKWebView 导入, UNUserNotification 提醒)
+- iOS (SwiftUI 原生 + React/TypeScript iOS PWA 版，Safari 一键书签导入)
 - 鸿蒙 (ArkUI, ArkWeb 导入, reminderAgentManager 提醒)
-- Kotlinx Serialization / Swift Codable / ArkTS（三端统一 v1 备份格式）
-- Gradle (KTS) / Xcode / DevEco Studio
+- Kotlinx Serialization / Swift Codable / ArkTS / Web TS（多端统一 v1 备份格式）
+- Gradle (KTS) / Xcode / DevEco Studio / Vite
 
 ## 项目结构
 
@@ -71,7 +74,9 @@ JLU_schedule 是一个面向吉大学生的课表工具，支持通过教务网�
 	- `remote/`：教务平台 HTTP 客户端、端点注册表、一键导入编排
 	- `widget/`：今日课程桌面小组件
 	- `reminder/`：每日课程提醒
-- `ios/`：iOS 版（SwiftUI，核心逻辑与 Android 逐函数对齐，XCTest 覆盖）
+- `ios/`：iOS 版
+	- `pwa/`：iOS 原生质感 PWA（React + Vite + TypeScript，添加到主屏幕全屏运行）
+	- `JLUSchedule/`：SwiftUI 原生版（核心逻辑与 Android 逐函数对齐，XCTest 覆盖）
 - `harmonyos/`：鸿蒙版（ArkUI，核心逻辑可用 `node verify/run.mjs` 在任意平台回归）
 - `docs/PORTING.md`：三端同步开发指南与核心逻辑对应表
 - `app/src/main/assets/`
@@ -79,6 +84,16 @@ JLU_schedule 是一个面向吉大学生的课表工具，支持通过教务网�
 	- `VPN.url`：校外导入入口
 
 ## 更新日志
+- v2.2.4（Android）
+	- 自定义背景下为课表日期、节次、页面标题、日程时间列等文字添加稳定底色，保护浅色与深色主题的可读性
+	- 对齐课表月份格与星期日期格的高度和上下位置
+	- 非本周课程改用淡化底色区分，避免文字与卡片一起变透明；背景图保留在空白区域和卡片间隙
+	- 增加随主题变化的背景遮罩，底部导航使用不透明底色；更换或清除背景时即时更新保护层
+- v2.2.3（Android）
+	- 修复分段授课的周次解析：支持数字星期、离散周次及分段地点，避免不同教师的课程错误显示在同一周（#3）；已导入的错误课表请重新导入并覆盖
+	- 修复 Android 16 / HyperOS 3 选择背景后无法进入裁剪的问题，取消裁剪保留原背景，保存失败会显示原因（#4）
+	- 按实际登录账号隔离成绩、绩点、考试和学业数据，避免切换账号后混用旧数据；首次升级后需重新同步工具数据
+	- 修复一键导入的提交与重试竞争，以及原生登录后工具同步被页面重建中断的问题（#2）
 - v2.2.2（Android）
 	- 修复成绩查询和考试安排顶部被通知栏遮挡，以及浅色页面系统栏图标对比度不足的问题
 - v2.2.1（Android）

@@ -10,13 +10,13 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import cn.jlu.schedule.data.AppPreferences
 import cn.jlu.schedule.domain.CourseMeetingDisplayRef
 import cn.jlu.schedule.domain.CourseMeetingRef
 import cn.jlu.schedule.model.Weekday
 import cn.jlu.schedule.ui.theme.ThemePalette
 import cn.jlu.schedule.ui.theme.UiFeedback
-import androidx.core.graphics.ColorUtils
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -40,7 +40,8 @@ class WeekTimetableRenderer(
     )
 
     // Keep enough opacity for course text to remain readable over user photos.
-    private val panelAlpha = if (hasCustomBackground) 0.68f else 1f
+    private val panelAlpha = if (hasCustomBackground) 0.94f else 1f
+    private val gridAlpha = if (hasCustomBackground) 0.34f else 1f
     private var density = 1f
 
     fun render(
@@ -73,6 +74,8 @@ class WeekTimetableRenderer(
         val context = headerRow.context
         val headerPanel = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
+            isBaselineAligned = false
+            gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, m.headerCellHeight)
             background = roundedBackground(withAlpha(palette.gridLeftColumn, panelAlpha), radius = 18f)
             clipToOutline = true
@@ -206,9 +209,9 @@ class WeekTimetableRenderer(
                 marginStart = m.cellGap
             }
             background = if (isToday) {
-                roundedBackground(withAlpha(palette.gridDayToday, panelAlpha), radius = 8f)
+                roundedBackground(withAlpha(palette.gridDayToday, gridAlpha), radius = 8f)
             } else {
-                roundedBackground(withAlpha(palette.gridDayCell, panelAlpha), radius = 8f)
+                roundedBackground(withAlpha(palette.gridDayCell, gridAlpha), radius = 8f)
             }
         }
 
@@ -265,8 +268,13 @@ class WeekTimetableRenderer(
                 }
                 orientation = LinearLayout.VERTICAL
                 setPadding(m.cardPadding, m.cardPadding, m.cardPadding, m.cardPadding)
-                alpha = if (item.isCurrentWeek) 1f else 0.55f
-                background = roundedBackground(CourseCardColors.forCourse(item.courseIndex, palette.isDark))
+                alpha = if (item.isCurrentWeek || hasCustomBackground) 1f else 0.55f
+                val courseColor = CourseCardColors.forCourse(item.courseIndex, palette.isDark)
+                background = roundedBackground(
+                    if (hasCustomBackground && !item.isCurrentWeek) {
+                        ColorUtils.blendARGB(courseColor, palette.panelAltBackground, 0.55f)
+                    } else courseColor
+                )
                 UiFeedback.addPressFeedback(this, CourseCardColors.textColorFor(item.courseIndex, palette.isDark), 8f)
                 elevation = if (isCurrentCourse) 10f else if (slot.hasConflict) 7f else 6f
                 setOnClickListener {

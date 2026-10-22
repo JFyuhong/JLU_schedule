@@ -5,6 +5,8 @@ import cn.jlu.schedule.model.MeetingTime
 import cn.jlu.schedule.model.WeekParity
 import cn.jlu.schedule.model.WeekRule
 import cn.jlu.schedule.model.Weekday
+import cn.jlu.schedule.parser.DoScheduleParser
+import cn.jlu.schedule.domain.WeekScheduleCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -24,6 +26,22 @@ class ImportedScheduleStorageTest {
         get() = tmp.root
 
     private fun storageDir(): File = File(tmp.root, "timetables")
+
+    @Test
+    fun repeatedOverwrite_preservesSeparateTeachingWeeksWithoutDuplicatingCourses() {
+        val courses = DoScheduleParser.parse(
+            javaClass.getResource("/issue3-split-teaching-arrangements.json")!!.readText()
+        )
+        repeat(2) {
+            ImportedScheduleStorage.importParsedCourses(filesDir, courses, ImportedScheduleStorage.ImportMode.OVERWRITE_ACTIVE)
+        }
+        val saved = ImportedScheduleStorage.loadActiveCourses(filesDir)
+        assertEquals(3, saved.size)
+        assertEquals("老师B", WeekScheduleCalculator.meetingsForWeek(saved, 6).single().course.teacher)
+        assertTrue(WeekScheduleCalculator.meetingsForWeek(saved, 9).isEmpty())
+        assertEquals("老师C", WeekScheduleCalculator.meetingsForWeek(saved, 10).single().course.teacher)
+        assertEquals("线上教学-前卫", WeekScheduleCalculator.meetingsForWeek(saved, 13).single().meeting.location)
+    }
 
     private fun manualCourse(name: String = "手动课程"): ImportedScheduleStorage.ManualCourseInput {
         return ImportedScheduleStorage.ManualCourseInput(

@@ -9,6 +9,7 @@ import android.graphics.drawable.StateListDrawable
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.View
+import cn.jlu.schedule.data.AppPreferences
 import androidx.core.graphics.ColorUtils
 
 /** Shared drawable factory for the app's restrained liquid-glass surfaces. */
@@ -30,7 +31,8 @@ object GlassSurface {
             Variant.Control -> palette.buttonBackground
             else -> palette.glassSurface
         }
-        val alpha = when (variant) {
+        val hasPhoto = !AppPreferences.getCustomBackgroundUri(context).isNullOrBlank()
+        val alpha = if (hasPhoto) 0xF0 else when (variant) {
             Variant.Strong -> if (palette.isDark) 0xE8 else 0xD9
             Variant.Control -> if (palette.isDark) 0xD8 else 0xC9
             Variant.Navigation -> if (palette.isDark) 0xE0 else 0xD0

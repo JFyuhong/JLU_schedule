@@ -31,11 +31,13 @@ class CampusCookieJar(private val storeFile: File) : CookieJar {
     private val lock = Any()
     private val cookies = LinkedHashMap<String, Cookie>()
     private var loaded = false
+    private var retired = false
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         synchronized(lock) {
+            if (retired) return
             ensureLoaded()
             val now = System.currentTimeMillis()
             cookies.forEach { cookie ->
@@ -66,6 +68,7 @@ class CampusCookieJar(private val storeFile: File) : CookieJar {
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         synchronized(lock) {
+            if (retired) return emptyList()
             ensureLoaded()
             val now = System.currentTimeMillis()
             val matched = mutableListOf<Cookie>()
@@ -99,6 +102,7 @@ class CampusCookieJar(private val storeFile: File) : CookieJar {
         if (header.isNullOrBlank()) return 0
         var imported = 0
         synchronized(lock) {
+            if (retired) return 0
             ensureLoaded()
             val now = System.currentTimeMillis()
             header.split(";").forEach { part ->
@@ -169,6 +173,14 @@ class CampusCookieJar(private val storeFile: File) : CookieJar {
         }
     }
 
+    /** Logout retires this jar so responses already in flight cannot restore the old session. */
+    fun retire() = synchronized(lock) {
+        cookies.clear()
+        loaded = true
+        persist()
+        retired = true
+    }
+
     private fun isAllowed(cookie: Cookie): Boolean =
         cookie.domain.endsWith(ALLOWED_DOMAIN_SUFFIX, ignoreCase = true)
 
@@ -216,6 +228,7 @@ class CampusCookieJar(private val storeFile: File) : CookieJar {
     }
 
     private fun persist() {
+        if (retired) return
         runCatching {
             storeFile.parentFile?.mkdirs()
             val tmp = File(storeFile.parentFile, storeFile.name + ".${System.nanoTime()}.tmp")
