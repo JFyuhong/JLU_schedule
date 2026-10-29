@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioGroup
 import android.widget.Spinner
@@ -40,6 +41,7 @@ import cn.jlu.schedule.ui.importer.QuickImportActivity
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.BackgroundReadability
 import cn.jlu.schedule.ui.theme.UiFeedback
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -97,13 +99,13 @@ class TimetableFragment : Fragment() {
         importScheduleButton = view.findViewById(R.id.importScheduleButton)
 
         val palette = ThemePaletteProvider.fromContext(requireContext())
-        BackgroundReadability.protectPanel(
-            view.findViewById(R.id.timetableHeader), palette, radiusDp = 0f
-        )
+        BackgroundReadability.protectPanel(view.findViewById(R.id.timetableHeader), palette, 12f)
+        SurfaceStyle.apply(addCourseButton, palette, SurfaceStyle.Variant.Control, 12f)
+        SurfaceStyle.apply(importScheduleButton, palette, SurfaceStyle.Variant.Control, 12f)
+        UiFeedback.addPressFeedback(addCourseButton, palette.iconTint, 12f)
+        UiFeedback.addPressFeedback(importScheduleButton, palette.iconTint, 12f)
         addCourseButton.imageTintList = ColorStateList.valueOf(palette.iconTint)
         importScheduleButton.imageTintList = ColorStateList.valueOf(palette.iconTint)
-        addCourseButton.backgroundTintList = ColorStateList.valueOf(palette.buttonBackground)
-        importScheduleButton.backgroundTintList = ColorStateList.valueOf(palette.buttonBackground)
 
         observeTimetable()
 
@@ -234,53 +236,143 @@ class TimetableFragment : Fragment() {
     private fun showImportSourceDialog() {
         val ctx = requireContext()
         val palette = ThemePaletteProvider.fromContext(ctx)
+        val density = resources.displayMetrics.density
+        fun dp(value: Int): Int = (value * density + 0.5f).toInt()
+
         val panel = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(34, 30, 34, 20)
+            setPadding(dp(20), dp(16), dp(20), dp(16))
+            background = SurfaceStyle.drawable(ctx, palette, SurfaceStyle.Variant.Strong, 16f)
         }
-        val quickImport = Button(ctx).apply { text = getString(R.string.import_quick) }
-        val inCampus = Button(ctx).apply { text = "我在校内" }
-        val offCampus = Button(ctx).apply { text = "我在校外" }
-        val cancel = Button(ctx).apply { text = "取消" }
-        UiFeedback.stylePrimaryButton(quickImport, palette)
-        UiFeedback.styleSecondaryButton(inCampus, palette)
-        UiFeedback.styleSecondaryButton(offCampus, palette)
-        UiFeedback.styleSecondaryButton(cancel, palette)
-        panel.addView(quickImport)
-        panel.addView(inCampus, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = 10 })
-        panel.addView(offCampus, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = 10 })
-        panel.addView(cancel, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = 10 })
 
+        val header = LinearLayout(ctx).apply {
+            gravity = android.view.Gravity.CENTER
+            minimumHeight = dp(56)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        val title = TextView(ctx).apply {
+            text = "选择导入网络"
+            textSize = 20f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(palette.textPrimary)
+            gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+        }
+        header.addView(title, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ))
+        panel.addView(header)
+
+        fun addImportOption(
+            label: String,
+            description: String,
+            accent: Boolean = false,
+            onClick: () -> Unit
+        ): LinearLayout {
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(20), dp(12), dp(12), dp(12))
+                background = roundedImportItem(
+                    if (accent) palette.buttonBackground else palette.panelBackground,
+                    palette,
+                    14
+                )
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { onClick() }
+            }
+            val copy = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+            copy.addView(TextView(ctx).apply {
+                text = label
+                textSize = 17f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(if (accent) palette.buttonText else palette.textPrimary)
+            })
+            copy.addView(TextView(ctx).apply {
+                text = description
+                textSize = 13f
+                setTextColor(if (accent) {
+                    ColorUtils.blendARGB(palette.buttonText, palette.buttonBackground, 0.2f)
+                } else palette.textSecondary)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(3) }
+            })
+            row.addView(copy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(ImageView(ctx).apply {
+                setImageResource(R.drawable.ic_settings_chevron)
+                imageTintList = ColorStateList.valueOf(if (accent) palette.buttonText else palette.iconTint)
+                contentDescription = null
+            }, LinearLayout.LayoutParams(dp(24), dp(24)))
+            row.minimumHeight = dp(74)
+            UiFeedback.addPressFeedback(row, palette.iconTint, 14f)
+            panel.addView(row, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(10) })
+            return row
+        }
+
+        val scroll = android.widget.ScrollView(ctx).apply {
+            isFillViewport = true
+            addView(panel)
+        }
         val dialog = AlertDialog.Builder(ctx)
-            .setTitle("选择导入网络")
-            .setView(panel)
+            .setView(scroll)
             .create()
-        dialog.show()
-        UiFeedback.styleDialogSurface(dialog, palette)
 
-        quickImport.setOnClickListener {
+        addImportOption(
+            getString(R.string.import_quick),
+            "使用已登录的校园会话自动获取",
+            accent = true
+        ) {
             dialog.dismiss()
             startQuickImport()
         }
-        inCampus.setOnClickListener {
+        addImportOption("校内网络", "连接校园网后打开教务系统") {
             dialog.dismiss()
             launchImportForAsset("target.url")
         }
-        offCampus.setOnClickListener {
+        addImportOption("校外网络", "通过 VPN 入口访问教务系统") {
             dialog.dismiss()
             launchImportForAsset("VPN.url")
         }
-        cancel.setOnClickListener {
-            dialog.dismiss()
+
+        val cancel = Button(ctx).apply {
+            text = getString(R.string.action_cancel)
+            UiFeedback.styleSecondaryButton(this, palette)
+            textSize = 16f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(dp(28), dp(14), dp(28), dp(14))
+        }
+        panel.addView(cancel, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(12) })
+
+        dialog.show()
+        UiFeedback.styleDialogSurface(dialog, palette)
+        dialog.window?.setDimAmount(0.42f)
+        cancel.setOnClickListener { dialog.dismiss() }
+    }
+
+    private fun roundedImportItem(fillColor: Int, palette: cn.jlu.schedule.ui.theme.ThemePalette, radiusDp: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radiusDp * resources.displayMetrics.density
+            setColor(fillColor)
+            setStroke(
+                (resources.displayMetrics.density).toInt().coerceAtLeast(1),
+                ColorUtils.blendARGB(fillColor, palette.iconTint, 0.16f)
+            )
         }
     }
 
@@ -386,12 +478,11 @@ class TimetableFragment : Fragment() {
     private fun updateHeader(week: Int) {
         val today = LocalDate.now()
         val weekDay = weekdayLabels[weekdayFromJava(today.dayOfWeek.value)] ?: "一"
-        weekText.text = if (week == currentWeekIndex) {
-            "第${week}周 周${weekDay}"
-        } else {
-            "第${week}周（非本周）"
-        }
-        dateText.text = today.format(DateTimeFormatter.ofPattern("yyyy/M/d"))
+        weekText.text = "第 $week 周"
+        val start = currentUiData?.semesterStart?.plusWeeks((week - 1).toLong()) ?: today
+        val dateFormat = DateTimeFormatter.ofPattern("M/d")
+        val range = "${start.format(dateFormat)} — ${start.plusDays(6).format(dateFormat)}"
+        dateText.text = if (week == currentWeekIndex) "$range · 今天周$weekDay" else "$range · 非本周"
     }
 
     private fun showManualAddDialog() {
@@ -410,12 +501,7 @@ class TimetableFragment : Fragment() {
         // 面板与输入框按当前主题着色
         val dialogPalette = ThemePaletteProvider.fromContext(ctx)
         formView.findViewById<LinearLayout>(R.id.addCoursePanel).background =
-            GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 20f
-                setColor(dialogPalette.panelAltBackground)
-                setStroke(2, ColorUtils.blendARGB(dialogPalette.panelAltBackground, dialogPalette.iconTint, 0.22f))
-            }
+            SurfaceStyle.drawable(ctx, dialogPalette, SurfaceStyle.Variant.Strong, 16f)
         // 每个输入框必须持有独立的 GradientDrawable 实例：共享实例会在首帧后被
         // 最后一个不同尺寸的视图改写 bounds，聚焦重绘时边框按过期尺寸渲染（框变短）
         listOf(
@@ -424,7 +510,7 @@ class TimetableFragment : Fragment() {
         ).forEach { input ->
             input.background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 10f
+                cornerRadius = 12f * resources.displayMetrics.density
                 setColor(dialogPalette.panelBackground)
                 setStroke(2, ColorUtils.blendARGB(dialogPalette.panelBackground, dialogPalette.iconTint, 0.18f))
             }

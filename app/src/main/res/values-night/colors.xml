@@ -2,7 +2,7 @@
 <resources>
     <!-- 暖色（深色） -->
     <color name="warm_page_background">#221A12</color>
-    <color name="warm_nav_background">#F01A140D</color>
+    <color name="warm_nav_background">#1A140D</color>
     <color name="warm_panel_background">#33281C</color>
     <color name="warm_panel_alt_background">#2B2116</color>
     <color name="warm_text_primary">#F3E7D3</color>
@@ -22,7 +22,7 @@
 
     <!-- 海蓝（深色） -->
     <color name="ocean_page_background">#101B26</color>
-    <color name="ocean_nav_background">#F00D1722</color>
+    <color name="ocean_nav_background">#0D1722</color>
     <color name="ocean_panel_background">#1B2C3D</color>
     <color name="ocean_panel_alt_background">#16232F</color>
     <color name="ocean_text_primary">#DDEAF6</color>
@@ -42,7 +42,7 @@
 
     <!-- 薄荷（深色） -->
     <color name="mint_page_background">#0F1F19</color>
-    <color name="mint_nav_background">#F00B1A14</color>
+    <color name="mint_nav_background">#0B1A14</color>
     <color name="mint_panel_background">#1A3028</color>
     <color name="mint_panel_alt_background">#152620</color>
     <color name="mint_text_primary">#D9EFE4</color>

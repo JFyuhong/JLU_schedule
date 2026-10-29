@@ -42,6 +42,7 @@ import cn.jlu.schedule.ui.theme.ThemePalette
 import cn.jlu.schedule.ui.theme.BackgroundReadability
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -158,29 +159,8 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val palette = ThemePaletteProvider.fromContext(requireContext())
-        val density = resources.displayMetrics.density
         refreshBackgroundPanels(view)
 
-        // 卡片与分隔线按主题色板着色
-        listOf(
-            view.findViewById<LinearLayout>(R.id.settingsCardTimetable),
-            view.findViewById<LinearLayout>(R.id.settingsCardAccount),
-            view.findViewById<LinearLayout>(R.id.settingsCardAppearance),
-            view.findViewById<LinearLayout>(R.id.settingsCardReminder),
-            view.findViewById<LinearLayout>(R.id.settingsCardBackground),
-            view.findViewById<LinearLayout>(R.id.settingsCardData),
-            view.findViewById<LinearLayout>(R.id.settingsCardAbout),
-        ).forEach { card ->
-            card.background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 18f * density
-                setColor(palette.detailCard)
-                setStroke(
-                    maxOf(1, density.toInt()),
-                    ColorUtils.blendARGB(palette.detailCard, palette.textSecondary, 0.13f)
-                )
-            }
-        }
         listOf(
             view.findViewById<ImageView>(R.id.iconTimetable),
             view.findViewById<ImageView>(R.id.iconAccount),
@@ -191,15 +171,9 @@ class SettingsFragment : Fragment() {
             view.findViewById<ImageView>(R.id.iconAbout),
         ).forEach { icon ->
             icon.imageTintList = ColorStateList.valueOf(palette.iconTint)
-            icon.background = GradientDrawable().apply {
-                cornerRadius = 11f * density
-                setColor(ColorUtils.blendARGB(palette.detailCard, palette.buttonBackground, 0.65f))
-            }
+            icon.background = SurfaceStyle.drawable(icon.context, palette, SurfaceStyle.Variant.Control, 14f)
         }
-        view.findViewById<View>(R.id.accountStatusPanel).background = GradientDrawable().apply {
-            cornerRadius = 12f * density
-            setColor(ColorUtils.blendARGB(palette.detailCard, palette.buttonBackground, 0.46f))
-        }
+        SurfaceStyle.apply(view.findViewById(R.id.accountStatusPanel), palette, SurfaceStyle.Variant.Control, 12f)
 
         // 可点击行
         val semesterStartDateText = view.findViewById<TextView>(R.id.semesterStartDateText)
@@ -442,6 +416,18 @@ class SettingsFragment : Fragment() {
 
     private fun refreshBackgroundPanels(view: View) {
         val palette = ThemePaletteProvider.fromContext(view.context)
+        // 卡片与分隔线按主题色板着色
+        listOf(
+            view.findViewById<LinearLayout>(R.id.settingsCardTimetable),
+            view.findViewById<LinearLayout>(R.id.settingsCardAccount),
+            view.findViewById<LinearLayout>(R.id.settingsCardAppearance),
+            view.findViewById<LinearLayout>(R.id.settingsCardReminder),
+            view.findViewById<LinearLayout>(R.id.settingsCardBackground),
+            view.findViewById<LinearLayout>(R.id.settingsCardData),
+            view.findViewById<LinearLayout>(R.id.settingsCardAbout),
+        ).forEach { card ->
+            SurfaceStyle.apply(card, palette, SurfaceStyle.Variant.Panel, 16f)
+        }
         BackgroundReadability.protectPanel(view.findViewById(R.id.settingsHeader), palette)
         view.findViewById<TextView>(R.id.settingsFooterVersion).apply {
             BackgroundReadability.protectPanel(this, palette, radiusDp = 12f)
@@ -672,6 +658,7 @@ class SettingsFragment : Fragment() {
                 .withMaxResultSize(2160, 3840)
                 .withOptions(options)
                 .getIntent(context)
+                .setClass(context, BackgroundCropActivity::class.java)
             cropLauncher.launch(cropIntent)
         }.onFailure { error ->
             pendingCropFile?.delete()

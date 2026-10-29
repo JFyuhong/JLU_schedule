@@ -22,6 +22,7 @@ import cn.jlu.schedule.domain.SectionTimes
 import cn.jlu.schedule.domain.WeekScheduleCalculator
 import cn.jlu.schedule.model.Weekday
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import cn.jlu.schedule.ui.timetable.CourseCardColors
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -80,12 +81,10 @@ class TodayScheduleFragment : Fragment() {
         root.setBackgroundColor(
             if (hasCustomBackground) Color.TRANSPARENT else palette.pageBackground
         )
-        view.findViewById<LinearLayout>(R.id.todaySummaryCard).background =
-            roundedBackground(if (hasCustomBackground) palette.panelAltBackground else withAlpha(palette.panelAltBackground, 0.62f))
-        val statBackground = if (hasCustomBackground) palette.panelBackground else withAlpha(palette.panelBackground, 0.5f)
-        countChip.background = roundedBackground(statBackground)
-        firstClass.background = roundedBackground(statBackground)
-        lastClass.background = roundedBackground(statBackground)
+        SurfaceStyle.apply(view.findViewById(R.id.todaySummaryCard), palette, SurfaceStyle.Variant.Panel, 16f)
+        countChip.background = SurfaceStyle.drawable(requireContext(), palette, SurfaceStyle.Variant.Control, 12f)
+        firstClass.background = SurfaceStyle.drawable(requireContext(), palette, SurfaceStyle.Variant.Panel, 12f)
+        lastClass.background = SurfaceStyle.drawable(requireContext(), palette, SurfaceStyle.Variant.Panel, 12f)
         title.setTextColor(themeColors.text)
         subTitle.setTextColor(themeColors.subText)
         countChip.setTextColor(themeColors.text)
@@ -257,6 +256,7 @@ class TodayScheduleFragment : Fragment() {
                     cornerRadius = dp(16).toFloat()
                     setColor(if (isActive) themeColors.emptyCard else themeColors.card)
                 }
+                SurfaceStyle.addDepth(this, palette, if (isActive) 3f else 2f)
                 addView(accent)
                 addView(content)
                 layoutParams = LinearLayout.LayoutParams(
@@ -269,6 +269,7 @@ class TodayScheduleFragment : Fragment() {
 
             val row = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
+                clipChildren = false
                 addView(timeColumn)
                 addView(card)
             }

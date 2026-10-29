@@ -46,14 +46,17 @@ object ThemePaletteProvider {
         }
         val isDark = (context.resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val panel = color("panel_background")
+        val panelAlt = color("panel_alt_background")
+        val icon = color("icon_tint")
         return ThemePalette(
             pageBackground = color("page_background"),
             navBackground = color("nav_background"),
-            panelBackground = color("panel_background"),
-            panelAltBackground = color("panel_alt_background"),
+            panelBackground = panel,
+            panelAltBackground = panelAlt,
             textPrimary = color("text_primary"),
             textSecondary = color("text_secondary"),
-            iconTint = color("icon_tint"),
+            iconTint = icon,
             buttonBackground = color("button_background"),
             buttonText = color("button_text"),
             gridHeader = color("grid_header"),

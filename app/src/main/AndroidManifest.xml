@@ -27,6 +27,10 @@
                 android:resource="@xml/file_paths" />
         </provider>
         <activity
+            android:name=".ui.settings.BackgroundCropActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+        <activity
             android:name=".ui.settings.TimetableManageActivity"
             android:exported="false" />
         <activity

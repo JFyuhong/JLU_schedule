@@ -10,12 +10,16 @@
         android:id="@+id/timetableHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="8dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
+        android:paddingStart="8dp"
         android:paddingTop="6dp"
         android:paddingEnd="8dp"
-        android:paddingBottom="4dp">
+        android:paddingBottom="6dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -28,36 +32,36 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="?android:attr/textColorPrimary"
-                android:textSize="15sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/currentDateText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingTop="2dp"
+                android:paddingTop="4dp"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp" />
         </LinearLayout>
 
         <ImageButton
             android:id="@+id/addCourseButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="4dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
             android:background="@drawable/bg_icon_action_button"
             android:contentDescription="@string/timetable_add_course"
-            android:padding="8dp"
+            android:padding="12dp"
             android:src="@drawable/ic_action_add"
             app:tint="#1F1F1F" />
 
         <ImageButton
             android:id="@+id/importScheduleButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@drawable/bg_icon_action_button"
             android:contentDescription="@string/timetable_import"
-            android:padding="8dp"
+            android:padding="12dp"
             android:src="@drawable/ic_action_import"
             app:tint="#1F1F1F" />
     </LinearLayout>

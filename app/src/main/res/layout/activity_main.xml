@@ -35,10 +35,22 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
+        <View
+            android:id="@+id/navDivider"
+            android:layout_width="match_parent"
+            android:layout_height="1px"
+            android:importantForAccessibility="no" />
+
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottomNav"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
+            app:itemHorizontalTranslationEnabled="false"
+            app:itemIconSize="22dp"
+            app:itemPaddingTop="4dp"
+            app:itemPaddingBottom="4dp"
+            app:itemTextAppearanceActive="@style/TextAppearance.JLU.Navigation.Active"
+            app:itemTextAppearanceInactive="@style/TextAppearance.JLU.Navigation"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/bottom_nav_menu" />
     </LinearLayout>
