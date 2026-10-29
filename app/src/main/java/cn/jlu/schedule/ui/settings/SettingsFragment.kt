@@ -42,7 +42,7 @@ import cn.jlu.schedule.ui.theme.ThemePalette
 import cn.jlu.schedule.ui.theme.BackgroundReadability
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
-import cn.jlu.schedule.ui.theme.GlassSurface
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -171,9 +171,9 @@ class SettingsFragment : Fragment() {
             view.findViewById<ImageView>(R.id.iconAbout),
         ).forEach { icon ->
             icon.imageTintList = ColorStateList.valueOf(palette.iconTint)
-            icon.background = GlassSurface.drawable(icon.context, palette, GlassSurface.Variant.Control, 14f)
+            icon.background = SurfaceStyle.drawable(icon.context, palette, SurfaceStyle.Variant.Control, 14f)
         }
-        GlassSurface.apply(view.findViewById(R.id.accountStatusPanel), palette, GlassSurface.Variant.Control, 18f)
+        SurfaceStyle.apply(view.findViewById(R.id.accountStatusPanel), palette, SurfaceStyle.Variant.Control, 12f)
 
         // 可点击行
         val semesterStartDateText = view.findViewById<TextView>(R.id.semesterStartDateText)
@@ -426,7 +426,7 @@ class SettingsFragment : Fragment() {
             view.findViewById<LinearLayout>(R.id.settingsCardData),
             view.findViewById<LinearLayout>(R.id.settingsCardAbout),
         ).forEach { card ->
-            GlassSurface.apply(card, palette, GlassSurface.Variant.Panel, 24f)
+            SurfaceStyle.apply(card, palette, SurfaceStyle.Variant.Panel, 16f)
         }
         BackgroundReadability.protectPanel(view.findViewById(R.id.settingsHeader), palette)
         view.findViewById<TextView>(R.id.settingsFooterVersion).apply {

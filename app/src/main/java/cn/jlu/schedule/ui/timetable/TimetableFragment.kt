@@ -39,8 +39,9 @@ import cn.jlu.schedule.ui.auth.LoginActivity
 import cn.jlu.schedule.ui.importer.ImportBrowserActivity
 import cn.jlu.schedule.ui.importer.QuickImportActivity
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
+import cn.jlu.schedule.ui.theme.BackgroundReadability
 import cn.jlu.schedule.ui.theme.UiFeedback
-import cn.jlu.schedule.ui.theme.GlassSurface
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -98,11 +99,11 @@ class TimetableFragment : Fragment() {
         importScheduleButton = view.findViewById(R.id.importScheduleButton)
 
         val palette = ThemePaletteProvider.fromContext(requireContext())
-        GlassSurface.apply(view.findViewById(R.id.timetableHeader), palette, GlassSurface.Variant.Panel, 24f)
-        GlassSurface.apply(addCourseButton, palette, GlassSurface.Variant.Control, 18f)
-        GlassSurface.apply(importScheduleButton, palette, GlassSurface.Variant.Control, 18f)
-        UiFeedback.addPressFeedback(addCourseButton, palette.iconTint, 18f)
-        UiFeedback.addPressFeedback(importScheduleButton, palette.iconTint, 18f)
+        BackgroundReadability.protectPanel(view.findViewById(R.id.timetableHeader), palette, 12f)
+        SurfaceStyle.apply(addCourseButton, palette, SurfaceStyle.Variant.Control, 12f)
+        SurfaceStyle.apply(importScheduleButton, palette, SurfaceStyle.Variant.Control, 12f)
+        UiFeedback.addPressFeedback(addCourseButton, palette.iconTint, 12f)
+        UiFeedback.addPressFeedback(importScheduleButton, palette.iconTint, 12f)
         addCourseButton.imageTintList = ColorStateList.valueOf(palette.iconTint)
         importScheduleButton.imageTintList = ColorStateList.valueOf(palette.iconTint)
 
@@ -240,15 +241,16 @@ class TimetableFragment : Fragment() {
 
         val panel = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(14), dp(18), dp(18))
-            background = GlassSurface.drawable(ctx, palette, GlassSurface.Variant.Strong, 28f)
+            setPadding(dp(20), dp(16), dp(20), dp(16))
+            background = SurfaceStyle.drawable(ctx, palette, SurfaceStyle.Variant.Strong, 16f)
         }
 
         val header = LinearLayout(ctx).apply {
             gravity = android.view.Gravity.CENTER
+            minimumHeight = dp(56)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(56)
+                ViewGroup.LayoutParams.WRAP_CONTENT
             )
         }
         val title = TextView(ctx).apply {
@@ -256,11 +258,11 @@ class TimetableFragment : Fragment() {
             textSize = 20f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setTextColor(palette.textPrimary)
-            gravity = android.view.Gravity.CENTER
+            gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
         }
         header.addView(title, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
+            ViewGroup.LayoutParams.WRAP_CONTENT
         ))
         panel.addView(header)
 
@@ -310,15 +312,21 @@ class TimetableFragment : Fragment() {
                 imageTintList = ColorStateList.valueOf(if (accent) palette.buttonText else palette.iconTint)
                 contentDescription = null
             }, LinearLayout.LayoutParams(dp(24), dp(24)))
+            row.minimumHeight = dp(74)
+            UiFeedback.addPressFeedback(row, palette.iconTint, 14f)
             panel.addView(row, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(74)
+                ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = dp(10) })
             return row
         }
 
+        val scroll = android.widget.ScrollView(ctx).apply {
+            isFillViewport = true
+            addView(panel)
+        }
         val dialog = AlertDialog.Builder(ctx)
-            .setView(panel)
+            .setView(scroll)
             .create()
 
         addImportOption(
@@ -347,7 +355,7 @@ class TimetableFragment : Fragment() {
         }
         panel.addView(cancel, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(56)
+            ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply { topMargin = dp(12) })
 
         dialog.show()
@@ -470,12 +478,11 @@ class TimetableFragment : Fragment() {
     private fun updateHeader(week: Int) {
         val today = LocalDate.now()
         val weekDay = weekdayLabels[weekdayFromJava(today.dayOfWeek.value)] ?: "一"
-        weekText.text = if (week == currentWeekIndex) {
-            "第${week}周 周${weekDay}"
-        } else {
-            "第${week}周（非本周）"
-        }
-        dateText.text = today.format(DateTimeFormatter.ofPattern("yyyy/M/d"))
+        weekText.text = "第 $week 周"
+        val start = currentUiData?.semesterStart?.plusWeeks((week - 1).toLong()) ?: today
+        val dateFormat = DateTimeFormatter.ofPattern("M/d")
+        val range = "${start.format(dateFormat)} — ${start.plusDays(6).format(dateFormat)}"
+        dateText.text = if (week == currentWeekIndex) "$range · 今天周$weekDay" else "$range · 非本周"
     }
 
     private fun showManualAddDialog() {
@@ -494,7 +501,7 @@ class TimetableFragment : Fragment() {
         // 面板与输入框按当前主题着色
         val dialogPalette = ThemePaletteProvider.fromContext(ctx)
         formView.findViewById<LinearLayout>(R.id.addCoursePanel).background =
-            GlassSurface.drawable(ctx, dialogPalette, GlassSurface.Variant.Strong, 28f)
+            SurfaceStyle.drawable(ctx, dialogPalette, SurfaceStyle.Variant.Strong, 16f)
         // 每个输入框必须持有独立的 GradientDrawable 实例：共享实例会在首帧后被
         // 最后一个不同尺寸的视图改写 bounds，聚焦重绘时边框按过期尺寸渲染（框变短）
         listOf(
@@ -503,7 +510,7 @@ class TimetableFragment : Fragment() {
         ).forEach { input ->
             input.background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 18f * resources.displayMetrics.density
+                cornerRadius = 12f * resources.displayMetrics.density
                 setColor(dialogPalette.panelBackground)
                 setStroke(2, ColorUtils.blendARGB(dialogPalette.panelBackground, dialogPalette.iconTint, 0.18f))
             }

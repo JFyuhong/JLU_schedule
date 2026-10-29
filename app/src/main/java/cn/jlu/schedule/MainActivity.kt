@@ -2,8 +2,6 @@ package cn.jlu.schedule
 
 import android.graphics.ImageDecoder
 import android.graphics.BitmapFactory
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
@@ -12,6 +10,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -26,7 +25,6 @@ import cn.jlu.schedule.data.ScheduleRepository
 import cn.jlu.schedule.ui.settings.SettingsFragment
 import cn.jlu.schedule.ui.timetable.TimetableFragment
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
-import cn.jlu.schedule.ui.theme.GlassSurface
 import cn.jlu.schedule.ui.today.TodayScheduleFragment
 import cn.jlu.schedule.ui.tools.ToolsFragment
 
@@ -47,14 +45,6 @@ class MainActivity : AppCompatActivity() {
         backgroundImage = findViewById(R.id.backgroundImage)
         backgroundScrim = findViewById(R.id.backgroundScrim)
         bottomNav = findViewById(R.id.bottomNav)
-        // Four destinations in a compact, centered dock; shrink safely on narrow windows.
-        findViewById<View>(R.id.dockContainer).addOnLayoutChangeListener { dock, _, _, _, _, _, _, _, _ ->
-            val availableWidth = (dock.width - dock.paddingLeft - dock.paddingRight).coerceAtLeast(0)
-            val dockWidth = minOf(availableWidth, (320f * resources.displayMetrics.density).toInt())
-            if (dockWidth > 0 && bottomNav.layoutParams.width != dockWidth) {
-                bottomNav.layoutParams = bottomNav.layoutParams.apply { width = dockWidth }
-            }
-        }
         applyUserAppearance()
         refreshCustomBackground()
         ScheduleRepository.refresh(this)
@@ -126,7 +116,7 @@ class MainActivity : AppCompatActivity() {
 
     fun refreshCustomBackground() {
         val loadToken = ++backgroundLoadToken
-        val uri = AppPreferences.getCustomBackgroundUri(this)?.let { runCatching { Uri.parse(it) }.getOrNull() }
+        val uri = AppPreferences.getCustomBackgroundUri(this)?.let { runCatching { it.toUri() }.getOrNull() }
         if (uri == null) {
             clearCustomBackground()
             return
@@ -138,15 +128,10 @@ class MainActivity : AppCompatActivity() {
             val bitmap = withContext(Dispatchers.IO) { decodeCustomBackground(uri, targetW, targetH) }
             if (isFinishing || isDestroyed || loadToken != backgroundLoadToken) return@launch
             if (bitmap == null) {
-                AppPreferences.setCustomBackgroundUri(this@MainActivity, null)
                 clearCustomBackground()
                 return@launch
             }
             backgroundImage.setImageBitmap(bitmap)
-            backgroundImage.alpha = 0.78f
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                backgroundImage.setRenderEffect(RenderEffect.createBlurEffect(18f, 18f, Shader.TileMode.CLAMP))
-            }
             backgroundImage.visibility = ImageView.VISIBLE
             backgroundScrim.visibility = View.VISIBLE
             applyUserAppearance()
@@ -193,7 +178,6 @@ class MainActivity : AppCompatActivity() {
     private fun clearCustomBackground() {
         backgroundLoadToken++
         backgroundImage.setImageDrawable(null)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) backgroundImage.setRenderEffect(null)
         backgroundImage.visibility = ImageView.GONE
         backgroundScrim.visibility = View.GONE
         applyUserAppearance()
@@ -206,10 +190,12 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = !palette.isDark
         }
         rootContainer.setBackgroundColor(palette.pageBackground)
-        bottomNav.background = GlassSurface.drawable(this, palette, GlassSurface.Variant.Navigation)
-        bottomNav.elevation = resources.displayMetrics.density * 5f
+        bottomNav.setBackgroundColor(palette.navBackground)
+        bottomNav.elevation = 0f
         bottomNav.isItemActiveIndicatorEnabled = false
-        bottomNav.itemBackground = GlassSurface.dockItem(this, palette)
+        findViewById<View>(R.id.navDivider).setBackgroundColor(
+            androidx.core.graphics.ColorUtils.blendARGB(palette.navBackground, palette.textPrimary, 0.08f)
+        )
         backgroundScrim.setBackgroundColor(
             androidx.core.graphics.ColorUtils.setAlphaComponent(palette.pageBackground, 72)
         )

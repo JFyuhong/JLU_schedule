@@ -24,11 +24,7 @@ data class ThemePalette(
     val detailTitle: Int,
     val detailBody: Int,
     val detailMeta: Int,
-    val isDark: Boolean,
-    val glassSurface: Int = panelBackground,
-    val glassSurfaceStrong: Int = panelAltBackground,
-    val glassStroke: Int = iconTint,
-    val glassHighlight: Int = 0xFFFFFFFF.toInt()
+    val isDark: Boolean
 )
 
 object ThemePaletteProvider {
@@ -72,11 +68,7 @@ object ThemePaletteProvider {
             detailTitle = color("detail_title"),
             detailBody = color("detail_body"),
             detailMeta = color("detail_meta"),
-            isDark = isDark,
-            glassSurface = panel,
-            glassSurfaceStrong = panelAlt,
-            glassStroke = icon,
-            glassHighlight = if (isDark) 0x55FFFFFF else 0xCCFFFFFF.toInt()
+            isDark = isDark
         )
     }
 

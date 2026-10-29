@@ -35,33 +35,24 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <FrameLayout
-            android:id="@+id/dockContainer"
+        <View
+            android:id="@+id/navDivider"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:paddingStart="18dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="18dp"
-            android:paddingBottom="8dp">
+            android:layout_height="1px"
+            android:importantForAccessibility="no" />
 
-            <com.google.android.material.bottomnavigation.BottomNavigationView
-                android:id="@+id/bottomNav"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_gravity="center"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                app:itemHorizontalTranslationEnabled="false"
-                app:itemIconSize="23dp"
-                app:itemPaddingTop="8dp"
-                app:itemPaddingBottom="8dp"
-                app:itemTextAppearanceActive="@style/TextAppearance.JLU.Dock.Active"
-                app:itemTextAppearanceInactive="@style/TextAppearance.JLU.Dock"
-                app:labelVisibilityMode="labeled"
-                app:menu="@menu/bottom_nav_menu" />
-        </FrameLayout>
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNav"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            app:itemHorizontalTranslationEnabled="false"
+            app:itemIconSize="22dp"
+            app:itemPaddingTop="6dp"
+            app:itemPaddingBottom="6dp"
+            app:itemTextAppearanceActive="@style/TextAppearance.JLU.Navigation.Active"
+            app:itemTextAppearanceInactive="@style/TextAppearance.JLU.Navigation"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/bottom_nav_menu" />
     </LinearLayout>
 
 </FrameLayout>

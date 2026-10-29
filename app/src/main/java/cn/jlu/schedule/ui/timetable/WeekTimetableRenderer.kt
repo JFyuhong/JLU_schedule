@@ -40,7 +40,7 @@ class WeekTimetableRenderer(
     )
 
     // Keep enough opacity for course text to remain readable over user photos.
-    private val panelAlpha = if (hasCustomBackground) 0.94f else 1f
+    private val panelAlpha = 1f
     private val gridAlpha = if (hasCustomBackground) 0.34f else 1f
     private var density = 1f
 
@@ -77,7 +77,7 @@ class WeekTimetableRenderer(
             isBaselineAligned = false
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, m.headerCellHeight)
-            background = roundedBackground(withAlpha(palette.gridLeftColumn, panelAlpha), radius = 18f)
+            background = roundedBackground(withAlpha(palette.gridLeftColumn, panelAlpha), radius = 10f)
             clipToOutline = true
         }
         headerRow.addView(headerPanel)
@@ -111,7 +111,7 @@ class WeekTimetableRenderer(
                 includeFontPadding = false
                 setTextColor(palette.textPrimary)
                 background = if (isToday) {
-                    roundedBackground(withAlpha(palette.gridHeaderToday, panelAlpha), radius = 18f)
+                    roundedBackground(withAlpha(palette.gridHeaderToday, panelAlpha), radius = 10f)
                 } else {
                     null
                 }
@@ -133,7 +133,7 @@ class WeekTimetableRenderer(
         val leftColumn = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(m.leftColumnWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
-            background = roundedBackground(withAlpha(palette.gridLeftColumn, panelAlpha), radius = 18f)
+            background = roundedBackground(withAlpha(palette.gridLeftColumn, panelAlpha), radius = 10f)
         }
 
         periodRanges.forEachIndexed { index, time ->
@@ -225,16 +225,6 @@ class WeekTimetableRenderer(
             val cardHeight = (end - start + 1) * m.sectionHeight - 4
             val cardWidth = m.dayColumnWidth - m.cellGap
 
-            // 1. 底层微阴影
-            val shadow = TextView(context).apply {
-                layoutParams = FrameLayout.LayoutParams(cardWidth, cardHeight.coerceAtLeast(36)).apply {
-                    topMargin = top + 4
-                    leftMargin = m.cellGap / 2 + 2
-                }
-                background = roundedBackground(if (item.isCurrentWeek) 0x2F000000.toInt() else 0x14000000.toInt(), radius = 10f)
-            }
-            dayColumn.addView(shadow)
-
             // 2. 冲突层叠便签效果：如果存在真实重叠课程，在主卡片底层绘制微偏移的第二张卡片
             if (slot.hasConflict) {
                 val secondaryItem = slot.allCourses.firstOrNull { it.course.courseName != slot.primary.course.courseName }
@@ -249,7 +239,7 @@ class WeekTimetableRenderer(
                     background = roundedBackground(secondaryColor, radius = 10f)
                     UiFeedback.addPressFeedback(this, CourseCardColors.textColorFor(secondaryItem.courseIndex, palette.isDark), 10f)
                     alpha = if (secondaryItem.isCurrentWeek) 0.82f else 0.42f
-                    elevation = 5f
+                    elevation = 0f
                     setOnClickListener {
                         onCourseClick(
                             slot.primary.toCourseMeetingRef(),
@@ -268,15 +258,14 @@ class WeekTimetableRenderer(
                 }
                 orientation = LinearLayout.VERTICAL
                 setPadding(m.cardPadding, m.cardPadding, m.cardPadding, m.cardPadding)
-                alpha = if (item.isCurrentWeek || hasCustomBackground) 1f else 0.55f
                 val courseColor = CourseCardColors.forCourse(item.courseIndex, palette.isDark)
                 background = roundedBackground(
-                    if (hasCustomBackground && !item.isCurrentWeek) {
+                    if (!item.isCurrentWeek) {
                         ColorUtils.blendARGB(courseColor, palette.panelAltBackground, 0.55f)
                     } else courseColor
                 )
                 UiFeedback.addPressFeedback(this, CourseCardColors.textColorFor(item.courseIndex, palette.isDark), 8f)
-                elevation = if (isCurrentCourse) 10f else if (slot.hasConflict) 7f else 6f
+                elevation = if (isCurrentCourse) 2f else 0f
                 setOnClickListener {
                     onCourseClick(
                         slot.primary.toCourseMeetingRef(),
@@ -342,7 +331,7 @@ class WeekTimetableRenderer(
                     setPadding(m.cardPadding, m.cardPadding, m.cardPadding, m.cardPadding)
                     background = roundedBackground(CourseCardColors.forCourse(segment.course.courseIndex, palette.isDark))
                     UiFeedback.addPressFeedback(this, CourseCardColors.textColorFor(segment.course.courseIndex, palette.isDark), 8f)
-                    elevation = 6f
+                    elevation = 0f
                     setOnClickListener {
                         onCourseClick(
                             segment.course.toCourseMeetingRef(),
@@ -565,7 +554,7 @@ class WeekTimetableRenderer(
             cornerRadius = radius * density
             setColor(fill)
             if ((fill ushr 24) > 0x40) {
-                setStroke(1, ColorUtils.setAlphaComponent(palette.glassHighlight, if (palette.isDark) 0x35 else 0x50))
+                setStroke(1, ColorUtils.blendARGB(fill, palette.textPrimary, 0.07f))
             }
         }
     }

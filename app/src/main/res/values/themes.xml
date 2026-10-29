@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="TextAppearance.JLU.Dock" parent="TextAppearance.AppCompat.Caption">
+    <style name="TextAppearance.JLU.Navigation" parent="TextAppearance.AppCompat.Caption">
         <item name="android:textSize">11sp</item>
         <item name="android:textStyle">normal</item>
     </style>
 
-    <style name="TextAppearance.JLU.Dock.Active" parent="TextAppearance.JLU.Dock">
+    <style name="TextAppearance.JLU.Navigation.Active" parent="TextAppearance.JLU.Navigation">
         <item name="android:textStyle">bold</item>
     </style>
 
@@ -49,7 +49,7 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:orientation">vertical</item>
-        <item name="android:padding">14dp</item>
+        <item name="android:padding">16dp</item>
         <item name="android:layout_marginBottom">12dp</item>
     </style>
 

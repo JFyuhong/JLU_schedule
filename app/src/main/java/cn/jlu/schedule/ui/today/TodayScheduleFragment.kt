@@ -22,7 +22,7 @@ import cn.jlu.schedule.domain.SectionTimes
 import cn.jlu.schedule.domain.WeekScheduleCalculator
 import cn.jlu.schedule.model.Weekday
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
-import cn.jlu.schedule.ui.theme.GlassSurface
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import cn.jlu.schedule.ui.timetable.CourseCardColors
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -81,10 +81,10 @@ class TodayScheduleFragment : Fragment() {
         root.setBackgroundColor(
             if (hasCustomBackground) Color.TRANSPARENT else palette.pageBackground
         )
-        GlassSurface.apply(view.findViewById(R.id.todaySummaryCard), palette, GlassSurface.Variant.Panel, 24f)
-        countChip.background = GlassSurface.drawable(requireContext(), palette, GlassSurface.Variant.Control, 18f)
-        firstClass.background = GlassSurface.drawable(requireContext(), palette, GlassSurface.Variant.Panel, 18f)
-        lastClass.background = GlassSurface.drawable(requireContext(), palette, GlassSurface.Variant.Panel, 18f)
+        SurfaceStyle.apply(view.findViewById(R.id.todaySummaryCard), palette, SurfaceStyle.Variant.Panel, 16f)
+        countChip.background = SurfaceStyle.drawable(requireContext(), palette, SurfaceStyle.Variant.Control, 12f)
+        firstClass.background = SurfaceStyle.drawable(requireContext(), palette, SurfaceStyle.Variant.Panel, 12f)
+        lastClass.background = SurfaceStyle.drawable(requireContext(), palette, SurfaceStyle.Variant.Panel, 12f)
         title.setTextColor(themeColors.text)
         subTitle.setTextColor(themeColors.subText)
         countChip.setTextColor(themeColors.text)

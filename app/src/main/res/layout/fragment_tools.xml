@@ -16,10 +16,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            android:padding="12dp"
+            android:padding="8dp"
             android:text="@string/nav_tools"
             android:textColor="?android:attr/textColorPrimary"
-            android:textSize="24sp"
+            android:textSize="26sp"
             android:textStyle="bold" />
 
         <!-- 学业与成绩 -->
@@ -87,7 +87,7 @@
         <LinearLayout
             android:id="@+id/toolsCardExams"
             style="@style/SettingsCard"
-            android:layout_marginTop="14dp">
+            android:layout_marginTop="4dp">
 
             <LinearLayout style="@style/SettingsCardHeader">
                 <ImageView
@@ -117,7 +117,7 @@
         <LinearLayout
             android:id="@+id/toolsCardWeb"
             style="@style/SettingsCard"
-            android:layout_marginTop="14dp">
+            android:layout_marginTop="4dp">
 
             <LinearLayout style="@style/SettingsCardHeader">
                 <ImageView

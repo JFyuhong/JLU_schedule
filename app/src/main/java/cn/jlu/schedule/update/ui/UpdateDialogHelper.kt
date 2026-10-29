@@ -16,7 +16,7 @@ import androidx.appcompat.app.AlertDialog
 import cn.jlu.schedule.R
 import cn.jlu.schedule.data.AppPreferences
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
-import cn.jlu.schedule.ui.theme.GlassSurface
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import cn.jlu.schedule.ui.theme.UiFeedback
 import cn.jlu.schedule.update.download.ApkDownloader
 import cn.jlu.schedule.update.installer.UpdateInstaller
@@ -75,7 +75,7 @@ object UpdateDialogHelper {
         val btnPrimary = view.findViewById<Button>(R.id.updateBtnPrimary)
 
         // 主题色配置
-        root.background = GlassSurface.drawable(activity, palette, GlassSurface.Variant.Strong, 28f)
+        root.background = SurfaceStyle.drawable(activity, palette, SurfaceStyle.Variant.Strong, 16f)
         title.setTextColor(palette.textPrimary)
         badge.setTextColor(palette.textPrimary)
         pubDate.setTextColor(palette.textSecondary)

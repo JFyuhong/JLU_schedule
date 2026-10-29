@@ -8,7 +8,7 @@ object BackgroundReadability {
     fun protectPanel(view: View, palette: ThemePalette, radiusDp: Float = 16f) {
         val enabled = !AppPreferences.getCustomBackgroundUri(view.context).isNullOrBlank()
         view.background = if (enabled) {
-            GlassSurface.drawable(view.context, palette, GlassSurface.Variant.Strong, radiusDp)
+            SurfaceStyle.drawable(view.context, palette, SurfaceStyle.Variant.Strong, radiusDp)
         } else null
     }
 }

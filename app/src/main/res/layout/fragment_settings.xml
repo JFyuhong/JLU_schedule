@@ -19,16 +19,16 @@
             android:id="@+id/settingsHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="16dp"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="8dp">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/settings_title"
                 android:textColor="?android:attr/textColorPrimary"
-                android:textSize="28sp"
+                android:textSize="26sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.02" />
 
@@ -127,7 +127,7 @@
                 android:layout_marginTop="2dp"
                 android:layout_marginBottom="6dp"
                 android:orientation="vertical"
-                android:padding="12dp">
+                android:padding="8dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"

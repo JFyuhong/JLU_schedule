@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="16dp">
 
         <LinearLayout
             android:id="@+id/todaySummaryCard"
@@ -18,14 +18,14 @@
             android:layout_height="wrap_content"
             android:background="#55FFFFFF"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="16dp">
 
             <TextView
                 android:id="@+id/todayTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="?android:attr/textColorPrimary"
-                android:textSize="20sp"
+                android:textSize="26sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -53,7 +53,7 @@
             android:id="@+id/todayStatsRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="16dp"
             android:orientation="horizontal">
 
             <TextView
@@ -80,7 +80,7 @@
             android:id="@+id/todayCourseList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="16dp"
             android:orientation="vertical" />
 
     </LinearLayout>

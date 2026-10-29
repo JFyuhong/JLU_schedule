@@ -35,22 +35,18 @@ object UiFeedback {
 
     fun stylePrimaryButton(button: Button, palette: ThemePalette) {
         button.backgroundTintList = null
-        button.background = GlassSurface.drawable(button.context, palette, GlassSurface.Variant.Control, 18f)
+        button.background = SurfaceStyle.drawable(button.context, palette, SurfaceStyle.Variant.Control, 12f)
         button.setTextColor(palette.buttonText)
         button.isAllCaps = false
-        button.minHeight = 0
-        button.minimumHeight = 0
-        button.setPadding(30, 18, 30, 18)
+        finishButton(button, palette)
     }
 
     fun styleSecondaryButton(button: Button, palette: ThemePalette) {
         button.backgroundTintList = null
-        button.background = GlassSurface.drawable(button.context, palette, GlassSurface.Variant.Panel, 18f)
+        button.background = SurfaceStyle.drawable(button.context, palette, SurfaceStyle.Variant.Panel, 12f)
         button.setTextColor(palette.textSecondary)
         button.isAllCaps = false
-        button.minHeight = 0
-        button.minimumHeight = 0
-        button.setPadding(28, 16, 28, 16)
+        finishButton(button, palette)
     }
 
     fun styleDangerButton(button: Button, palette: ThemePalette) {
@@ -61,26 +57,34 @@ object UiFeedback {
             ColorUtils.blendARGB(0xFFD35454.toInt(), palette.buttonBackground, 0.45f)
         }
         val textColor = if (palette.isDark) 0xFFEF9A9A.toInt() else 0xFFFFFFFF.toInt()
-        button.background = GlassSurface.drawable(button.context, palette, GlassSurface.Variant.Control, 18f).apply {
+        button.background = SurfaceStyle.drawable(button.context, palette, SurfaceStyle.Variant.Control, 12f).apply {
             setColor(danger)
             setStroke(1, ColorUtils.setAlphaComponent(palette.textPrimary, 0x55))
         }
         button.setTextColor(textColor)
         button.isAllCaps = false
-        button.minHeight = 0
-        button.minimumHeight = 0
-        button.setPadding(28, 16, 28, 16)
+        finishButton(button, palette)
+    }
+
+    private fun finishButton(button: Button, palette: ThemePalette) {
+        val density = button.resources.displayMetrics.density
+        button.stateListAnimator = null
+        button.elevation = 0f
+        button.minHeight = (48 * density).toInt()
+        button.minimumHeight = button.minHeight
+        button.setPadding((16 * density).toInt(), (10 * density).toInt(), (16 * density).toInt(), (10 * density).toInt())
+        addPressFeedback(button, palette.iconTint, 12f)
     }
 
     fun styleInput(input: android.widget.EditText, palette: ThemePalette) {
-        input.background = GlassSurface.drawable(input.context, palette, GlassSurface.Variant.Control, 18f)
+        input.background = SurfaceStyle.drawable(input.context, palette, SurfaceStyle.Variant.Control, 12f)
         input.setTextColor(palette.textPrimary)
         input.setHintTextColor(palette.textSecondary)
     }
 
     fun styleDialogSurface(dialog: AlertDialog, palette: ThemePalette) {
         dialog.window?.setBackgroundDrawable(
-            GlassSurface.drawable(dialog.context, palette, GlassSurface.Variant.Strong, 28f)
+            SurfaceStyle.drawable(dialog.context, palette, SurfaceStyle.Variant.Strong, 16f)
         )
     }
 }

@@ -28,7 +28,7 @@ import cn.jlu.schedule.remote.ScheduleRemoteSource
 import cn.jlu.schedule.ui.auth.LoginActivity
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
 import cn.jlu.schedule.ui.theme.UiFeedback
-import cn.jlu.schedule.ui.theme.GlassSurface
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -107,7 +107,7 @@ class QuickImportActivity : AppCompatActivity() {
 
         val palette = ThemePaletteProvider.fromContext(this)
         findViewById<LinearLayout>(R.id.quickCard).background =
-            GlassSurface.drawable(this, palette, GlassSurface.Variant.Strong, 28f)
+            SurfaceStyle.drawable(this, palette, SurfaceStyle.Variant.Strong, 16f)
         message = findViewById(R.id.quickMessage)
         progress = findViewById(R.id.quickProgress)
         actionLogin = findViewById(R.id.quickActionLogin)

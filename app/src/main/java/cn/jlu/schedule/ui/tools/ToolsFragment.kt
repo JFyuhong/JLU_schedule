@@ -14,7 +14,7 @@ import cn.jlu.schedule.R
 import cn.jlu.schedule.auth.TpassConfig
 import cn.jlu.schedule.remote.JwEndpoints
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
-import cn.jlu.schedule.ui.theme.GlassSurface
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import cn.jlu.schedule.ui.theme.BackgroundReadability
 
 /** 工具页：汇聚成绩查询、绩点计算、考试安排与学业完成等教务工具（底部导航「工具」Tab） */
@@ -35,7 +35,7 @@ class ToolsFragment : Fragment() {
         BackgroundReadability.protectPanel(view.findViewById(R.id.toolsHeader), palette)
 
         fun styleCard(cardId: Int, iconId: Int) {
-            view.findViewById<View>(cardId)?.let { GlassSurface.apply(it, palette, GlassSurface.Variant.Panel, 24f) }
+            view.findViewById<View>(cardId)?.let { SurfaceStyle.apply(it, palette, SurfaceStyle.Variant.Panel, 16f) }
             view.findViewById<ImageView>(iconId)?.imageTintList = ColorStateList.valueOf(palette.iconTint)
         }
 

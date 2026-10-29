@@ -24,7 +24,7 @@ import cn.jlu.schedule.model.WeekParity
 import cn.jlu.schedule.model.Weekday
 import cn.jlu.schedule.ui.theme.ThemePalette
 import cn.jlu.schedule.ui.theme.ThemePaletteProvider
-import cn.jlu.schedule.ui.theme.GlassSurface
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import com.google.android.material.bottomsheet.BottomSheetDialog
 
 object CourseDetailBottomSheet {
@@ -65,7 +65,7 @@ object CourseDetailBottomSheet {
         }
 
         val card = view.findViewById<LinearLayout>(R.id.detailCardRoot)
-        card.background = GlassSurface.drawable(context, palette, GlassSurface.Variant.Strong, 28f)
+        card.background = SurfaceStyle.drawable(context, palette, SurfaceStyle.Variant.Strong, 16f)
 
         // 分割线按主题着色
         val dividerColor = ColorUtils.blendARGB(palette.detailCard, palette.textSecondary, 0.22f)
