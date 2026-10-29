@@ -3,24 +3,24 @@
     <color name="ic_launcher_background">#E36A3A</color>
 
     <!-- 暖色（浅色） -->
-    <color name="warm_page_background">#F7F6F2</color>
-    <color name="warm_nav_background">#FFFEFC</color>
-    <color name="warm_panel_background">#FFFEFC</color>
-    <color name="warm_panel_alt_background">#FFFEFC</color>
-    <color name="warm_text_primary">#34312D</color>
-    <color name="warm_text_secondary">#69645C</color>
-    <color name="warm_icon_tint">#80613E</color>
-    <color name="warm_button_background">#EEE5D7</color>
-    <color name="warm_button_text">#493B2C</color>
-    <color name="warm_grid_header">#F0EEE7</color>
-    <color name="warm_grid_header_today">#E9DDCA</color>
-    <color name="warm_grid_left_column">#F0EEE7</color>
-    <color name="warm_grid_day_cell">#FBFAF7</color>
-    <color name="warm_grid_day_today">#F1EBDD</color>
-    <color name="warm_detail_card">#FFFEFC</color>
-    <color name="warm_detail_title">#34312D</color>
-    <color name="warm_detail_body">#57534C</color>
-    <color name="warm_detail_meta">#69645C</color>
+    <color name="warm_page_background">#F4E4C6</color>
+    <color name="warm_nav_background">#FFF1DA</color>
+    <color name="warm_panel_background">#FFF1DA</color>
+    <color name="warm_panel_alt_background">#FFF5E4</color>
+    <color name="warm_text_primary">#513D29</color>
+    <color name="warm_text_secondary">#735B40</color>
+    <color name="warm_icon_tint">#896039</color>
+    <color name="warm_button_background">#EBD3AC</color>
+    <color name="warm_button_text">#51371F</color>
+    <color name="warm_grid_header">#EFDFC2</color>
+    <color name="warm_grid_header_today">#E7C69A</color>
+    <color name="warm_grid_left_column">#F3E6CC</color>
+    <color name="warm_grid_day_cell">#FFF5E4</color>
+    <color name="warm_grid_day_today">#F5E3C4</color>
+    <color name="warm_detail_card">#FFF1DA</color>
+    <color name="warm_detail_title">#513D29</color>
+    <color name="warm_detail_body">#644D34</color>
+    <color name="warm_detail_meta">#735B40</color>
 
     <!-- 海蓝（浅色） -->
     <color name="ocean_page_background">#F4F7FA</color>
