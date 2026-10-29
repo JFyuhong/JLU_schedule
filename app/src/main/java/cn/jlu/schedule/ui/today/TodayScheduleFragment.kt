@@ -256,6 +256,7 @@ class TodayScheduleFragment : Fragment() {
                     cornerRadius = dp(16).toFloat()
                     setColor(if (isActive) themeColors.emptyCard else themeColors.card)
                 }
+                SurfaceStyle.addDepth(this, palette, if (isActive) 3f else 2f)
                 addView(accent)
                 addView(content)
                 layoutParams = LinearLayout.LayoutParams(

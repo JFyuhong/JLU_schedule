@@ -17,6 +17,7 @@ import cn.jlu.schedule.domain.CourseMeetingRef
 import cn.jlu.schedule.model.Weekday
 import cn.jlu.schedule.ui.theme.ThemePalette
 import cn.jlu.schedule.ui.theme.UiFeedback
+import cn.jlu.schedule.ui.theme.SurfaceStyle
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -59,6 +60,8 @@ class WeekTimetableRenderer(
         bodyRow.removeAllViews()
         headerRow.setPadding(metrics.outerPadding, 0, metrics.outerPadding, 0)
         bodyRow.setPadding(metrics.outerPadding, 0, metrics.outerPadding, 0)
+        headerRow.clipChildren = false
+        bodyRow.clipChildren = false
 
         buildHeader(headerRow, metrics, weekStart, today)
         buildBody(bodyRow, metrics, items, onCourseClick, weekStart, today, currentSection)
@@ -79,6 +82,7 @@ class WeekTimetableRenderer(
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, m.headerCellHeight)
             background = roundedBackground(withAlpha(palette.gridLeftColumn, panelAlpha), radius = 10f)
             clipToOutline = true
+            SurfaceStyle.addDepth(this, palette, 1f)
         }
         headerRow.addView(headerPanel)
         val corner = TextView(context).apply {
@@ -134,6 +138,7 @@ class WeekTimetableRenderer(
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(m.leftColumnWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
             background = roundedBackground(withAlpha(palette.gridLeftColumn, panelAlpha), radius = 10f)
+            SurfaceStyle.addDepth(this, palette, 1f)
         }
 
         periodRanges.forEachIndexed { index, time ->
@@ -205,6 +210,7 @@ class WeekTimetableRenderer(
         val context = parent.context
         val columnHeight = m.sectionHeight * periodRanges.size
         val dayColumn = FrameLayout(context).apply {
+            clipChildren = false
             layoutParams = LinearLayout.LayoutParams(m.dayColumnWidth, columnHeight).apply {
                 marginStart = m.cellGap
             }
@@ -239,7 +245,7 @@ class WeekTimetableRenderer(
                     background = roundedBackground(secondaryColor, radius = 10f)
                     UiFeedback.addPressFeedback(this, CourseCardColors.textColorFor(secondaryItem.courseIndex, palette.isDark), 10f)
                     alpha = if (secondaryItem.isCurrentWeek) 0.82f else 0.42f
-                    elevation = 0f
+                    SurfaceStyle.addDepth(this, palette, 1f)
                     setOnClickListener {
                         onCourseClick(
                             slot.primary.toCourseMeetingRef(),
@@ -265,7 +271,7 @@ class WeekTimetableRenderer(
                     } else courseColor
                 )
                 UiFeedback.addPressFeedback(this, CourseCardColors.textColorFor(item.courseIndex, palette.isDark), 8f)
-                elevation = if (isCurrentCourse) 2f else 0f
+                SurfaceStyle.addDepth(this, palette, if (isCurrentCourse) 3f else 2f)
                 setOnClickListener {
                     onCourseClick(
                         slot.primary.toCourseMeetingRef(),
@@ -331,7 +337,7 @@ class WeekTimetableRenderer(
                     setPadding(m.cardPadding, m.cardPadding, m.cardPadding, m.cardPadding)
                     background = roundedBackground(CourseCardColors.forCourse(segment.course.courseIndex, palette.isDark))
                     UiFeedback.addPressFeedback(this, CourseCardColors.textColorFor(segment.course.courseIndex, palette.isDark), 8f)
-                    elevation = 0f
+                    SurfaceStyle.addDepth(this, palette, 2f)
                     setOnClickListener {
                         onCourseClick(
                             segment.course.toCourseMeetingRef(),

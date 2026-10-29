@@ -1,6 +1,8 @@
 package cn.jlu.schedule.ui.theme
 
 import android.view.View
+import android.animation.ObjectAnimator
+import android.animation.StateListAnimator
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -20,6 +22,11 @@ object UiFeedback {
         view.foreground = RippleDrawable(
             ColorStateList.valueOf(ColorUtils.setAlphaComponent(color, 0x28)), null, mask
         )
+        view.stateListAnimator = StateListAnimator().apply {
+            addState(intArrayOf(android.R.attr.state_pressed),
+                ObjectAnimator.ofFloat(view, "translationZ", -view.resources.displayMetrics.density).setDuration(100))
+            addState(intArrayOf(), ObjectAnimator.ofFloat(view, "translationZ", 0f).setDuration(140))
+        }
         view.isFocusable = true
     }
 
@@ -68,8 +75,7 @@ object UiFeedback {
 
     private fun finishButton(button: Button, palette: ThemePalette) {
         val density = button.resources.displayMetrics.density
-        button.stateListAnimator = null
-        button.elevation = 0f
+        SurfaceStyle.addDepth(button, palette, 1.5f)
         button.minHeight = (48 * density).toInt()
         button.minimumHeight = button.minHeight
         button.setPadding((16 * density).toInt(), (10 * density).toInt(), (16 * density).toInt(), (10 * density).toInt())
