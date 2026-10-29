@@ -25,6 +25,9 @@ object SurfaceStyle {
         return GradientDrawable().apply {
             cornerRadius = radiusDp * context.resources.displayMetrics.density
             orientation = GradientDrawable.Orientation.TOP_BOTTOM
+            // Seed the fill alpha before the first outline is read; setColors alone
+            // leaves a newly created drawable's paint transparent until its first draw.
+            setColor(ColorUtils.setAlphaComponent(fill, 255))
             colors = intArrayOf(
                 ColorUtils.blendARGB(fill, Color.WHITE, if (palette.isDark) 0.035f else 0.14f),
                 ColorUtils.setAlphaComponent(fill, 255)
@@ -43,8 +46,9 @@ object SurfaceStyle {
         view.elevation = elevationDp * view.resources.displayMetrics.density
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val shadow = if (palette.isDark) Color.BLACK else palette.textPrimary
-            view.outlineAmbientShadowColor = ColorUtils.setAlphaComponent(shadow, 0x24)
-            view.outlineSpotShadowColor = ColorUtils.setAlphaComponent(shadow, 0x48)
+            // Android already attenuates native shadows with the theme shadow alpha.
+            view.outlineAmbientShadowColor = ColorUtils.setAlphaComponent(shadow, 0xAA)
+            view.outlineSpotShadowColor = ColorUtils.setAlphaComponent(shadow, 0xCC)
         }
     }
 }

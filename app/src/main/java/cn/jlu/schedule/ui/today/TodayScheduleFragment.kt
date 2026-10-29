@@ -269,6 +269,7 @@ class TodayScheduleFragment : Fragment() {
 
             val row = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
+                clipChildren = false
                 addView(timeColumn)
                 addView(card)
             }

@@ -9,6 +9,7 @@
         android:id="@+id/todayContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:clipToPadding="false"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -81,6 +82,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:clipChildren="false"
             android:orientation="vertical" />
 
     </LinearLayout>
